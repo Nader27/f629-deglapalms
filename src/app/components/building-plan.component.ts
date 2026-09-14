@@ -17,7 +17,7 @@ const BLOCK_META: Record<BlockName, BlockMeta> = {
     North: { titleKey: 'block1Title', icon: '🚪', stairwellKey: 'stairwell1', stairwellEndKey: null, titlePosition: 'top', borderClass: 'border-2 border-amber-500', titleClass: 'text-amber-400' },
     Second: { titleKey: 'block2Title', icon: '', stairwellKey: null, stairwellEndKey: null, titlePosition: 'top', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
     Third: { titleKey: 'block3Title', icon: '', stairwellKey: null, stairwellEndKey: 'stairwell2', titlePosition: 'top', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    South: { titleKey: 'block4Title', icon: '🏢', stairwellKey: 'stairwell2', stairwellEndKey: null, titlePosition: 'bottom', borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
+    South: { titleKey: 'block4Title', icon: '🏢', stairwellKey: 'stairwell3', stairwellEndKey: null, titlePosition: 'bottom', borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
 };
 
 type Connector = 'hallway' | 'courtyard' | null;
