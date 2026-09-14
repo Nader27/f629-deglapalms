@@ -3,7 +3,6 @@ CREATE TABLE apartments (
   apt_number VARCHAR(10) PRIMARY KEY, -- e.g. '101', 'G15', '414'
   floor VARCHAR(20) NOT NULL,
   block VARCHAR(20) NOT NULL,
-  side VARCHAR(10) NOT NULL, -- 'left' or 'right' of the corridor, used to draw the floor plan
   is_gate BOOLEAN DEFAULT FALSE, -- true for the ground-floor gate slot (no resident data)
   resident_name VARCHAR(100) DEFAULT '',
   resident_phone VARCHAR(20) DEFAULT '',
