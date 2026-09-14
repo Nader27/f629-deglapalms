@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
@@ -45,6 +45,10 @@ import { SupabaseService } from '../../services/supabase.service';
   `,
 })
 export class LoginComponent {
+    private fb = inject(FormBuilder);
+    private supabase = inject(SupabaseService);
+    private router = inject(Router);
+
     loading = signal(false);
     errorMessage = signal('');
 
@@ -52,12 +56,6 @@ export class LoginComponent {
         email: ['', [Validators.required, Validators.email]],
         password: ['', Validators.required],
     });
-
-    constructor(
-        private fb: FormBuilder,
-        private supabase: SupabaseService,
-        private router: Router,
-    ) { }
 
     async submit() {
         if (this.form.invalid) return;
