@@ -74,7 +74,7 @@ export class ResidentComponent implements OnInit {
     apartments = signal<Apartment[]>([]);
 
     progress = computed(() => {
-        const list = this.apartments().filter(a => !a.is_gate);
+        const list = this.apartments();
         const paid = list.filter(a => a.has_paid).length;
         const total = list.length;
         return { paid, total, percent: total ? Math.round((paid / total) * 100) : 0 };

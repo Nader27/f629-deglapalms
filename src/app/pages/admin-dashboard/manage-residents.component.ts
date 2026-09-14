@@ -75,8 +75,7 @@ import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout }
             <tr>
               <th class="text-left px-4 py-3">Apt #</th>
               <th class="text-left px-4 py-3">Floor / Block</th>
-              <th class="text-left px-4 py-3">Resident</th>
-              <th class="text-left px-4 py-3">Owner</th>
+              <th class="text-left px-4 py-3">Contact</th>
               <th class="text-left px-4 py-3">Rented</th>
               <th class="text-left px-4 py-3">Paid ({{ fee }} LE)</th>
               <th class="text-left px-4 py-3">Actions</th>
@@ -87,8 +86,13 @@ import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout }
               <tr class="border-t border-slate-100 hover:bg-slate-50">
                 <td class="px-4 py-2 font-semibold text-slate-800">{{ apt.apt_number }}</td>
                 <td class="px-4 py-2 text-slate-500">{{ apt.floor }} · {{ apt.block }}</td>
-                <td class="px-4 py-2">{{ apt.resident_name || '—' }}</td>
-                <td class="px-4 py-2">{{ apt.owner_name || '—' }}</td>
+                <td class="px-4 py-2">
+                  @if (apt.is_rented) {
+                    {{ apt.resident_name || '—' }} <span class="text-slate-400">{{ apt.resident_phone }}</span>
+                  } @else {
+                    {{ apt.owner_name || '—' }} <span class="text-slate-400">{{ apt.owner_phone }}</span>
+                  }
+                </td>
                 <td class="px-4 py-2">
                   <button (click)="toggleRented(apt)"
                     class="px-2 py-1 rounded text-xs font-medium"
@@ -120,22 +124,29 @@ import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout }
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
           <h2 class="text-lg font-bold text-slate-800 mb-4">Apartment {{ apt.apt_number }}</h2>
           <div class="space-y-3">
-            <div>
-              <label class="block text-xs text-slate-500 mb-1">Resident Name</label>
-              <input [(ngModel)]="editForm.resident_name" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-            </div>
-            <div>
-              <label class="block text-xs text-slate-500 mb-1">Resident Phone</label>
-              <input [(ngModel)]="editForm.resident_phone" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-            </div>
-            <div>
-              <label class="block text-xs text-slate-500 mb-1">Owner Name</label>
-              <input [(ngModel)]="editForm.owner_name" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
-            </div>
             <label class="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" [(ngModel)]="editForm.is_rented" />
               Apartment is rented
             </label>
+            @if (editForm.is_rented) {
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Resident Name</label>
+                <input [(ngModel)]="editForm.resident_name" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Resident Phone</label>
+                <input [(ngModel)]="editForm.resident_phone" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </div>
+            } @else {
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Owner Name</label>
+                <input [(ngModel)]="editForm.owner_name" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Owner Phone</label>
+                <input [(ngModel)]="editForm.owner_phone" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </div>
+            }
             <label class="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" [(ngModel)]="editForm.has_paid" />
               Paid {{ fee }} LE maintenance
@@ -204,7 +215,7 @@ export class ManageResidentsComponent implements OnInit {
 
     async seedBuilding() {
         this.seeding.set(true);
-        const layout = generateBuildingLayout().filter(a => !a.is_gate);
+        const layout = generateBuildingLayout();
         await this.supabase.upsertApartments(layout);
         await this.load();
         this.seeding.set(false);

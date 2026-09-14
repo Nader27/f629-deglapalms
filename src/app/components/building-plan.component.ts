@@ -5,15 +5,16 @@ interface BlockMeta {
     title: string;
     icon: string;
     stairwell: string | null;
+    stairwellEnd: string | null;
     borderClass: string;
     titleClass: string;
 }
 
 const BLOCK_META: Record<BlockName, BlockMeta> = {
-    North: { title: 'Block 1 — Back Entrance', icon: '🚪', stairwell: 'Stairwell 1', borderClass: 'border-2 border-amber-500', titleClass: 'text-amber-400' },
-    Second: { title: 'Block 2 — Back Section', icon: '', stairwell: null, borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    Third: { title: 'Block 3 — Back Section', icon: '', stairwell: null, borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    South: { title: 'Block 4 — Front Entrance', icon: '🏢', stairwell: 'Stairwell 2', borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
+    North: { title: 'Block 1 — Back Entrance', icon: '🚪', stairwell: 'Stairwell 1', stairwellEnd: null, borderClass: 'border-2 border-amber-500', titleClass: 'text-amber-400' },
+    Second: { title: 'Block 2 — Back Section', icon: '', stairwell: null, stairwellEnd: null, borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
+    Third: { title: 'Block 3 — Back Section', icon: '', stairwell: null, stairwellEnd: 'Stairwell 2', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
+    South: { title: 'Block 4 — Front Entrance', icon: '🏢', stairwell: 'Stairwell 2', stairwellEnd: null, borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
 };
 
 type Connector = 'hallway' | 'courtyard' | null;
@@ -22,62 +23,78 @@ type Connector = 'hallway' | 'courtyard' | null;
     selector: 'app-building-plan',
     standalone: true,
     template: `
-    <div class="flex flex-col lg:flex-row gap-4">
-      <div class="flex-1 space-y-0">
+    <div class="flex flex-col lg:flex-row gap-3">
+      <div class="flex-1 space-y-0 min-w-0">
         @for (row of rows(); track row.block) {
-          <div class="rounded-2xl p-4 bg-slate-800" [class]="meta(row.block).borderClass">
-            <p class="text-center text-sm font-bold mb-2" [class]="meta(row.block).titleClass">
+          <div class="rounded-xl p-2.5 sm:p-3 bg-slate-800" [class]="meta(row.block).borderClass">
+            <p class="text-center text-xs font-bold mb-1.5" [class]="meta(row.block).titleClass">
               {{ meta(row.block).icon }} {{ meta(row.block).title }}
             </p>
 
             @if (meta(row.block).stairwell) {
-              <div class="mx-auto w-fit px-3 py-1 rounded-full bg-slate-700 text-[10px] font-mono tracking-widest text-amber-300 mb-3">
+              <div class="mx-auto w-fit px-2.5 py-0.5 rounded-full bg-slate-700 text-[9px] font-mono tracking-widest text-amber-300 mb-2">
                 ▒ {{ meta(row.block).stairwell }} ▒
               </div>
             }
 
-            <div class="grid grid-cols-2 gap-x-10 gap-y-3">
-              <div class="space-y-3">
-                @for (apt of leftSlots(row.block); track $index) {
-                  @if (apt) {
+            <div class="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-2 justify-items-center">
+              <div class="flex flex-col gap-2 h-30 sm:h-34 items-center">
+                @for (slot of leftSlots(row.block); track $index) {
+                  @if (slot.apt; as apt) {
                     <button type="button" (mouseenter)="hovered.set(apt)" (mouseleave)="hovered.set(null)" (click)="onClick(apt)"
-                      class="relative aspect-square w-full flex items-center justify-center rounded-lg text-sm font-semibold text-center transition"
+                      class="relative flex-1 w-14 sm:w-16 flex items-center justify-center rounded-lg text-center transition"
                       [class]="tileClasses(apt)"
+                      [class.text-base]="slot.solo"
+                      [class.font-bold]="slot.solo"
+                      [class.ring-2]="slot.solo || hovered() === apt"
+                      [class.ring-amber-300]="slot.solo"
+                      [class.ring-white]="!slot.solo && hovered() === apt"
+                      [class.text-[11px]]="!slot.solo"
+                      [class.font-semibold]="!slot.solo"
                       [class.cursor-pointer]="editable()"
-                      [class.cursor-default]="!editable()"
-                      [class.ring-2]="hovered() === apt"
-                      [class.ring-white]="hovered() === apt">
-                      {{ apt.is_gate ? 'GATE' : 'Apt ' + apt.apt_number }}
-                      @if (!apt.is_gate && apt.has_paid) {
-                        <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] leading-none flex items-center justify-center shadow">✓</span>
+                      [class.cursor-default]="!editable()">
+                      {{ apt.apt_number }}
+                      @if (apt.has_paid) {
+                        <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] leading-none flex items-center justify-center shadow">✓</span>
                       }
                     </button>
                   } @else {
-                    <div class="aspect-square w-full rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
+                    <div class="flex-1 w-14 sm:w-16 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
                   }
                 }
               </div>
-              <div class="space-y-3">
-                @for (apt of rightSlots(row.block); track $index) {
-                  @if (apt) {
+              <div class="flex flex-col gap-2 h-30 sm:h-34 items-center">
+                @for (slot of rightSlots(row.block); track $index) {
+                  @if (slot.apt; as apt) {
                     <button type="button" (mouseenter)="hovered.set(apt)" (mouseleave)="hovered.set(null)" (click)="onClick(apt)"
-                      class="relative aspect-square w-full flex items-center justify-center rounded-lg text-sm font-semibold text-center transition"
+                      class="relative flex-1 w-14 sm:w-16 flex items-center justify-center rounded-lg text-center transition"
                       [class]="tileClasses(apt)"
+                      [class.text-base]="slot.solo"
+                      [class.font-bold]="slot.solo"
+                      [class.ring-2]="slot.solo || hovered() === apt"
+                      [class.ring-amber-300]="slot.solo"
+                      [class.ring-white]="!slot.solo && hovered() === apt"
+                      [class.text-[11px]]="!slot.solo"
+                      [class.font-semibold]="!slot.solo"
                       [class.cursor-pointer]="editable()"
-                      [class.cursor-default]="!editable()"
-                      [class.ring-2]="hovered() === apt"
-                      [class.ring-white]="hovered() === apt">
-                      {{ apt.is_gate ? 'GATE' : 'Apt ' + apt.apt_number }}
-                      @if (!apt.is_gate && apt.has_paid) {
-                        <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] leading-none flex items-center justify-center shadow">✓</span>
+                      [class.cursor-default]="!editable()">
+                      {{ apt.apt_number }}
+                      @if (apt.has_paid) {
+                        <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] leading-none flex items-center justify-center shadow">✓</span>
                       }
                     </button>
                   } @else {
-                    <div class="aspect-square w-full rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
+                    <div class="flex-1 w-14 sm:w-16 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
                   }
                 }
               </div>
             </div>
+
+            @if (meta(row.block).stairwellEnd) {
+              <div class="mx-auto w-fit px-2.5 py-0.5 rounded-full bg-slate-700 text-[9px] font-mono tracking-widest text-amber-300 mt-2">
+                ▒ {{ meta(row.block).stairwellEnd }} ▒
+              </div>
+            }
           </div>
 
           @if (row.connectorAfter === 'hallway') {
@@ -101,30 +118,32 @@ type Connector = 'hallway' | 'courtyard' | null;
       <div class="w-full lg:w-64 shrink-0">
         @if (hovered(); as apt) {
           <div class="bg-slate-800 border border-slate-600 rounded-xl p-4 text-sm sticky top-4">
-            <p class="font-bold text-white mb-1">{{ apt.is_gate ? 'Main Gate' : 'Apartment ' + apt.apt_number }}</p>
+            <p class="font-bold text-white mb-1">Apartment {{ apt.apt_number }}</p>
             <p class="text-slate-400 text-xs mb-2">{{ apt.floor }} · {{ meta(apt.block).title }}</p>
-            @if (!apt.is_gate) {
-              <p class="mb-1">
-                Status:
-                <span [class.text-emerald-400]="apt.has_paid" [class.text-red-400]="!apt.has_paid">
-                  {{ apt.has_paid ? '✓ Paid ' + fee + ' LE' : 'Unpaid' }}
-                </span>
-              </p>
-              <p class="mb-1">{{ hasInfo(apt) ? (apt.is_rented ? 'Rented' : 'Owner-occupied') : 'No info on file' }}</p>
-              @if (showPersonalInfo()) {
-                <hr class="my-2 border-slate-700" />
+            <p class="mb-1">
+              Status:
+              <span [class.text-emerald-400]="apt.has_paid" [class.text-red-400]="!apt.has_paid">
+                {{ apt.has_paid ? '✓ Paid ' + fee + ' LE' : 'Unpaid' }}
+              </span>
+            </p>
+            <p class="mb-1">{{ hasInfo(apt) ? (apt.is_rented ? 'Rented' : 'Owner-occupied') : 'No info on file' }}</p>
+            @if (showPersonalInfo()) {
+              <hr class="my-2 border-slate-700" />
+              @if (apt.is_rented) {
                 <p>Resident: {{ apt.resident_name || '—' }}</p>
                 <p>Phone: {{ apt.resident_phone || '—' }}</p>
+              } @else {
                 <p>Owner: {{ apt.owner_name || '—' }}</p>
+                <p>Phone: {{ apt.owner_phone || '—' }}</p>
               }
-              @if (editable()) {
-                <p class="text-indigo-400 text-xs mt-3">Click the apartment to edit →</p>
-              }
+            }
+            @if (editable()) {
+              <p class="text-indigo-400 text-xs mt-3">Click the apartment to edit →</p>
             }
           </div>
         } @else {
           <div class="bg-slate-800/50 border border-dashed border-slate-700 rounded-xl p-4 text-sm text-slate-500">
-            Hover an apartment to see its details.
+            Hover or tap an apartment to see its details.
           </div>
         }
       </div>
@@ -163,7 +182,6 @@ export class BuildingPlanComponent {
     }
 
     tileClasses(apt: Apartment): string {
-        if (apt.is_gate) return 'bg-slate-600 text-slate-200';
         if (!this.hasInfo(apt)) return 'bg-slate-700 text-slate-300';
         return apt.is_rented ? 'bg-violet-700 text-violet-100' : 'bg-sky-700 text-sky-100';
     }
@@ -171,7 +189,7 @@ export class BuildingPlanComponent {
     leftApts(block: BlockName) {
         return this.floorApts()
             .filter(a => a.block === block && apartmentSide(a) === 'left')
-            .sort((a, b) => (b.is_gate ? 1 : 0) - (a.is_gate ? 1 : 0) || a.apt_number.localeCompare(b.apt_number));
+            .sort((a, b) => a.apt_number.localeCompare(b.apt_number));
     }
 
     rightApts(block: BlockName) {
@@ -180,19 +198,20 @@ export class BuildingPlanComponent {
             .sort((a, b) => a.apt_number.localeCompare(b.apt_number));
     }
 
-    // Roof (and any other floor with a shorter column) still renders 2 slots per side; missing ones become disabled squares.
-    leftSlots(block: BlockName): (Apartment | null)[] {
-        return this.padTo2(this.leftApts(block));
+    // Normally 2 slots per side; an empty side (e.g. Roof) shows 2 disabled placeholders, and a lone
+    // apartment (e.g. Ground's 015, now that the gate slot is gone) stretches to fill both.
+    leftSlots(block: BlockName): { apt: Apartment | null; solo: boolean }[] {
+        return this.toSlots(this.leftApts(block));
     }
 
-    rightSlots(block: BlockName): (Apartment | null)[] {
-        return this.padTo2(this.rightApts(block));
+    rightSlots(block: BlockName): { apt: Apartment | null; solo: boolean }[] {
+        return this.toSlots(this.rightApts(block));
     }
 
-    private padTo2(apts: Apartment[]): (Apartment | null)[] {
-        const slots: (Apartment | null)[] = [...apts];
-        while (slots.length < 2) slots.push(null);
-        return slots;
+    private toSlots(apts: Apartment[]): { apt: Apartment | null; solo: boolean }[] {
+        if (apts.length === 0) return [{ apt: null, solo: false }, { apt: null, solo: false }];
+        if (apts.length === 1) return [{ apt: apts[0], solo: true }];
+        return apts.map(apt => ({ apt, solo: false }));
     }
 
     private connectorType(a: BlockName, b: BlockName): Connector {
@@ -200,6 +219,7 @@ export class BuildingPlanComponent {
     }
 
     onClick(apt: Apartment) {
-        if (this.editable() && !apt.is_gate) this.edit.emit(apt);
+        this.hovered.set(apt);
+        if (this.editable()) this.edit.emit(apt);
     }
 }

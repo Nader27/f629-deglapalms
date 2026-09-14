@@ -10,10 +10,10 @@ export interface Apartment {
     apt_number: string;
     floor: FloorName;
     block: BlockName;
-    is_gate?: boolean;
     resident_name?: string | null;
     resident_phone?: string | null;
     owner_name?: string | null;
+    owner_phone?: string | null;
     is_rented: boolean;
     has_paid: boolean;
     updated_at?: string;
@@ -24,6 +24,7 @@ function pad(n: number): string {
 }
 
 // Right column numbers from North (top) to South (bottom), left column from South (bottom) back up to North (top).
+// When hasGate is true, the last North-block left slot is the building gate and is simply never generated.
 function standardFloorSlots(floor: FloorName, prefix: number, hasGate = false): Apartment[] {
     const slots: Apartment[] = [];
 
@@ -37,9 +38,7 @@ function standardFloorSlots(floor: FloorName, prefix: number, hasGate = false): 
         const first = prefix + 8 + j * 2 + 1;
         const second = prefix + 8 + j * 2 + 2;
         slots.push(makeApt(pad(first), floor, block));
-        if (hasGate && block === 'North' && j === leftOrder.length - 1) {
-            slots.push({ ...makeApt('GATE', floor, block), is_gate: true });
-        } else {
+        if (!(hasGate && block === 'North' && j === leftOrder.length - 1)) {
             slots.push(makeApt(pad(second), floor, block));
         }
     });
@@ -51,7 +50,7 @@ function makeApt(apt_number: string, floor: FloorName, block: BlockName): Apartm
     return { apt_number, floor, block, is_rented: false, has_paid: false };
 }
 
-/** Full building layout (67 residential slots + 1 gate slot), used both to seed the DB and to lay out the UI. */
+/** Full building layout (66 apartments; the gate takes the 67th ground-floor slot and is never generated). */
 export function generateBuildingLayout(): Apartment[] {
     return [
         ...standardFloorSlots('Ground', 0, true),
@@ -67,8 +66,8 @@ export function generateBuildingLayout(): Apartment[] {
 }
 
 // Right column is local position 01-08 within a floor, left column is 09-16 — derived on the fly, never persisted.
-export function apartmentSide(apt: Pick<Apartment, 'apt_number' | 'floor' | 'is_gate'>): Side {
-    if (apt.is_gate || apt.floor === 'Roof') return 'left';
+export function apartmentSide(apt: Pick<Apartment, 'apt_number' | 'floor'>): Side {
+    if (apt.floor === 'Roof') return 'left';
     const local = parseInt(apt.apt_number, 10) % 100;
     return local >= 1 && local <= 8 ? 'right' : 'left';
 }
