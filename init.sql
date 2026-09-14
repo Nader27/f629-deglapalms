@@ -47,3 +47,20 @@ CREATE POLICY "Public Read Settings" ON app_settings FOR SELECT USING (true);
 CREATE POLICY "Admin Full Access Settings" ON app_settings FOR ALL USING (auth.role() = 'authenticated');
 
 INSERT INTO app_settings (id, payment_url, whatsapp_url) VALUES (true, NULL, NULL);
+
+-- 5. Storage bucket for uploaded receipt/screenshot images (used by supabase.service.ts uploadReceipt())
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('receipts', 'receipts', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Read Receipt Images" ON storage.objects
+  FOR SELECT USING (bucket_id = 'receipts');
+
+CREATE POLICY "Admin Upload Receipt Images" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'receipts' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admin Manage Receipt Images" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'receipts' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admin Delete Receipt Images" ON storage.objects
+  FOR DELETE USING (bucket_id = 'receipts' AND auth.role() = 'authenticated');

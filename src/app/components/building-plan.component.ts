@@ -24,9 +24,8 @@ type Connector = 'hallway' | 'courtyard' | null;
     selector: 'app-building-plan',
     standalone: true,
     template: `
-    <div class="flex flex-col lg:flex-row gap-3">
-      <div class="flex-1 space-y-0 min-w-0">
-        @for (row of rows(); track row.block) {
+    <div class="space-y-0">
+      @for (row of rows(); track row.block) {
           <div class="rounded-xl p-2.5 sm:p-3 bg-slate-800" [class]="meta(row.block).borderClass">
             <p class="text-center text-xs font-bold mb-1.5" [class]="meta(row.block).titleClass">
               {{ meta(row.block).icon }} {{ meta(row.block).title }}
@@ -39,18 +38,17 @@ type Connector = 'hallway' | 'courtyard' | null;
             }
 
             <div class="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-2 justify-items-center">
-              <div class="flex flex-col gap-2 h-30 sm:h-34 items-center">
+              <div class="flex flex-col gap-2 h-34 sm:h-42 items-center">
                 @for (slot of leftSlots(row.block); track $index) {
                   @if (slot.apt; as apt) {
                     <button type="button" (mouseenter)="hovered.set(apt)" (mouseleave)="hovered.set(null)" (click)="onClick(apt)"
-                      class="relative flex-1 w-14 sm:w-16 flex items-center justify-center rounded-lg text-center transition"
+                      class="relative flex-1 w-16 sm:w-20 flex items-center justify-center rounded-lg text-center transition"
                       [class]="tileClasses(apt)"
                       [class.text-base]="slot.solo"
                       [class.font-bold]="slot.solo"
-                      [class.ring-2]="slot.solo || hovered() === apt"
-                      [class.ring-amber-300]="slot.solo"
-                      [class.ring-white]="!slot.solo && hovered() === apt"
-                      [class.text-[11px]]="!slot.solo"
+                      [class.ring-2]="hovered() === apt"
+                      [class.ring-white]="hovered() === apt"
+                      [class.text-xs]="!slot.solo"
                       [class.font-semibold]="!slot.solo"
                       [class.cursor-pointer]="editable()"
                       [class.cursor-default]="!editable()">
@@ -60,22 +58,21 @@ type Connector = 'hallway' | 'courtyard' | null;
                       }
                     </button>
                   } @else {
-                    <div class="flex-1 w-14 sm:w-16 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
+                    <div class="flex-1 w-16 sm:w-20 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
                   }
                 }
               </div>
-              <div class="flex flex-col gap-2 h-30 sm:h-34 items-center">
+              <div class="flex flex-col gap-2 h-34 sm:h-42 items-center">
                 @for (slot of rightSlots(row.block); track $index) {
                   @if (slot.apt; as apt) {
                     <button type="button" (mouseenter)="hovered.set(apt)" (mouseleave)="hovered.set(null)" (click)="onClick(apt)"
-                      class="relative flex-1 w-14 sm:w-16 flex items-center justify-center rounded-lg text-center transition"
+                      class="relative flex-1 w-16 sm:w-20 flex items-center justify-center rounded-lg text-center transition"
                       [class]="tileClasses(apt)"
                       [class.text-base]="slot.solo"
                       [class.font-bold]="slot.solo"
-                      [class.ring-2]="slot.solo || hovered() === apt"
-                      [class.ring-amber-300]="slot.solo"
-                      [class.ring-white]="!slot.solo && hovered() === apt"
-                      [class.text-[11px]]="!slot.solo"
+                      [class.ring-2]="hovered() === apt"
+                      [class.ring-white]="hovered() === apt"
+                      [class.text-xs]="!slot.solo"
                       [class.font-semibold]="!slot.solo"
                       [class.cursor-pointer]="editable()"
                       [class.cursor-default]="!editable()">
@@ -85,7 +82,7 @@ type Connector = 'hallway' | 'courtyard' | null;
                       }
                     </button>
                   } @else {
-                    <div class="flex-1 w-14 sm:w-16 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
+                    <div class="flex-1 w-16 sm:w-20 rounded-lg border-2 border-dashed border-slate-700 bg-slate-800/40"></div>
                   }
                 }
               </div>
@@ -116,57 +113,57 @@ type Connector = 'hallway' | 'courtyard' | null;
         }
       </div>
 
-      <div class="w-full lg:w-64 shrink-0">
-        @if (hovered(); as apt) {
-          <div class="bg-slate-800 border border-slate-600 rounded-xl p-4 text-sm sticky top-4">
-            <p class="font-bold text-white mb-1">Apartment {{ apt.apt_number }}</p>
-            <p class="text-slate-400 text-xs mb-2">{{ apt.floor }} · {{ meta(apt.block).title }}</p>
-            <p class="mb-1">
-              Status:
-              <span [class.text-emerald-400]="apt.has_paid" [class.text-red-400]="!apt.has_paid">
-                {{ apt.has_paid ? '✓ Paid ' + fee + ' LE' : 'Unpaid' }}
-              </span>
-            </p>
-            <p class="mb-1">{{ hasInfo(apt) ? (apt.is_rented ? 'Rented' : 'Owner-occupied') : 'No info on file' }}</p>
-            @if (!apt.has_paid && paymentUrl()) {
-              <a [href]="paymentUrl()" target="_blank" rel="noopener"
-                class="block text-center mt-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
-                💳 Pay Maintenance ({{ fee }} LE)
-              </a>
-            }
-            @if (aptPayments(apt).length) {
-              <div class="mt-3 rounded-lg bg-slate-900/60 border border-slate-700 p-3">
-                <p class="text-xs text-slate-400 uppercase mb-1">Payments Linked to This Apartment</p>
-                <p class="text-emerald-400 font-bold text-lg mb-2">{{ aptPaymentsTotal(apt) }} LE</p>
-                @for (t of aptPayments(apt); track t.id) {
-                  <div class="flex justify-between text-xs text-slate-300 py-0.5">
-                    <span>{{ t.title }}</span>
-                    <span>{{ t.amount }} LE</span>
-                  </div>
-                }
-              </div>
-            }
-            @if (showPersonalInfo()) {
-              <hr class="my-2 border-slate-700" />
-              @if (apt.is_rented) {
-                <p>Resident: {{ apt.resident_name || '—' }}</p>
-                <p>Phone: {{ apt.resident_phone || '—' }}</p>
-              } @else {
-                <p>Owner: {{ apt.owner_name || '—' }}</p>
-                <p>Phone: {{ apt.owner_phone || '—' }}</p>
+    @if (selected(); as apt) {
+      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" (click)="closeModal()">
+        <div class="bg-slate-800 border border-slate-600 rounded-xl p-5 text-sm w-full max-w-sm relative" (click)="$event.stopPropagation()">
+          <button type="button" (click)="closeModal()" aria-label="Close"
+            class="absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center">✕</button>
+          <p class="font-bold text-white mb-1 pr-8">Apartment {{ apt.apt_number }}</p>
+          <p class="text-slate-400 text-xs mb-2">{{ apt.floor }} · {{ meta(apt.block).title }}</p>
+          <p class="mb-1">
+            Status:
+            <span [class.text-emerald-400]="apt.has_paid" [class.text-red-400]="!apt.has_paid">
+              {{ apt.has_paid ? '✓ Paid ' + fee + ' LE' : 'Unpaid' }}
+            </span>
+          </p>
+          <p class="mb-1">{{ hasInfo(apt) ? (apt.is_rented ? 'Rented' : 'Owner-occupied') : 'No info on file' }}</p>
+          @if (!apt.has_paid && paymentUrl()) {
+            <a [href]="paymentUrl()" target="_blank" rel="noopener"
+              class="block text-center mt-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+              💳 Pay Maintenance ({{ fee }} LE)
+            </a>
+          }
+          @if (aptPayments(apt).length) {
+            <div class="mt-3 rounded-lg bg-slate-900/60 border border-slate-700 p-3">
+              <p class="text-xs text-slate-400 uppercase mb-1">Payments Linked to This Apartment</p>
+              <p class="text-emerald-400 font-bold text-lg mb-2">{{ aptPaymentsTotal(apt) }} LE</p>
+              @for (t of aptPayments(apt); track t.id) {
+                <div class="flex justify-between text-xs text-slate-300 py-0.5">
+                  <span>{{ t.title }}</span>
+                  <span>{{ t.amount }} LE</span>
+                </div>
               }
+            </div>
+          }
+          @if (showPersonalInfo()) {
+            <hr class="my-2 border-slate-700" />
+            @if (apt.is_rented) {
+              <p>Resident: {{ apt.resident_name || '—' }}</p>
+              <p>Phone: {{ apt.resident_phone || '—' }}</p>
+            } @else {
+              <p>Owner: {{ apt.owner_name || '—' }}</p>
+              <p>Phone: {{ apt.owner_phone || '—' }}</p>
             }
-            @if (editable()) {
-              <p class="text-indigo-400 text-xs mt-3">Click the apartment to edit →</p>
-            }
-          </div>
-        } @else {
-          <div class="bg-slate-800/50 border border-dashed border-slate-700 rounded-xl p-4 text-sm text-slate-500">
-            Hover or tap an apartment to see its details.
-          </div>
-        }
+          }
+          @if (editable()) {
+            <button type="button" (click)="requestEdit(apt)"
+              class="w-full mt-3 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+              Edit Apartment
+            </button>
+          }
+        </div>
       </div>
-    </div>
+    }
   `,
 })
 export class BuildingPlanComponent {
@@ -181,6 +178,7 @@ export class BuildingPlanComponent {
     edit = output<Apartment>();
 
     hovered = signal<Apartment | null>(null);
+    selected = signal<Apartment | null>(null);
 
     floorApts = computed(() => this.apartments().filter(a => a.floor === this.floor()));
 
@@ -249,6 +247,15 @@ export class BuildingPlanComponent {
 
     onClick(apt: Apartment) {
         this.hovered.set(apt);
-        if (this.editable()) this.edit.emit(apt);
+        this.selected.set(apt);
+    }
+
+    closeModal() {
+        this.selected.set(null);
+    }
+
+    requestEdit(apt: Apartment) {
+        this.edit.emit(apt);
+        this.closeModal();
     }
 }

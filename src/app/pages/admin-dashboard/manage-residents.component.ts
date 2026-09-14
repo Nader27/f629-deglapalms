@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
 import { FinanceService } from '../../services/finance.service';
 import { BuildingPlanComponent } from '../../components/building-plan.component';
+import { FloorTabsComponent } from '../../components/floor-tabs.component';
 import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout } from '../../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
 
 @Component({
     selector: 'app-manage-residents',
     standalone: true,
-    imports: [FormsModule, RouterLink, BuildingPlanComponent],
+    imports: [FormsModule, RouterLink, BuildingPlanComponent, FloorTabsComponent],
     template: `
     <div class="min-h-screen bg-slate-100 p-6">
       <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -77,18 +78,12 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         class="w-full mb-4 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
 
       <div class="bg-slate-900 rounded-xl p-4 mb-6">
-        <div class="flex gap-2 mb-4 overflow-x-auto">
-          @for (floor of floors; track floor) {
-            <button (click)="selectedFloor.set(floor)"
-              class="px-4 py-2 rounded-lg text-sm whitespace-nowrap"
-              [class.bg-indigo-600]="selectedFloor() === floor"
-              [class.bg-slate-800]="selectedFloor() !== floor"
-              [class.text-white]="true">
-              {{ floor }}
-            </button>
-          }
+        <div class="flex gap-3 items-start">
+          <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
+          <div class="flex-1 min-w-0">
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
+          </div>
         </div>
-        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">

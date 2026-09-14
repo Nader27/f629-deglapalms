@@ -57,8 +57,10 @@ import { SupabaseService } from '../../services/supabase.service';
             <input [(ngModel)]="form.apt_number" class="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="e.g. 305" />
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs text-slate-500 mb-1">Receipt (optional)</label>
-            <input type="file" (change)="onFileSelected($event)" class="w-full text-sm" />
+            <label class="block text-xs text-slate-500 mb-1">
+              {{ form.type === 'income' ? 'Payment Screenshot (optional)' : 'Receipt Image (optional)' }}
+            </label>
+            <input type="file" accept="image/*" (change)="onFileSelected($event)" class="w-full text-sm" />
           </div>
         </div>
 
@@ -81,7 +83,7 @@ import { SupabaseService } from '../../services/supabase.service';
               <th class="text-left px-4 py-3">Apt #</th>
               <th class="text-left px-4 py-3">Type</th>
               <th class="text-left px-4 py-3">Amount</th>
-              <th class="text-left px-4 py-3">Receipt</th>
+              <th class="text-left px-4 py-3">Image</th>
             </tr>
           </thead>
           <tbody>
@@ -98,7 +100,9 @@ import { SupabaseService } from '../../services/supabase.service';
                 <td class="px-4 py-2 font-medium">{{ t.amount }} LE</td>
                 <td class="px-4 py-2">
                   @if (t.receipt_url) {
-                    <a [href]="t.receipt_url" target="_blank" class="text-indigo-600 hover:underline">View</a>
+                    <a [href]="t.receipt_url" target="_blank">
+                      <img [src]="t.receipt_url" alt="" class="w-10 h-10 object-cover rounded border border-slate-200" />
+                    </a>
                   } @else {
                     —
                   }
