@@ -9,15 +9,22 @@ interface BlockMeta {
     stairwellKey: string | null;
     stairwellEndKey: string | null;
     titlePosition: 'top' | 'bottom';
-    borderClass: string;
     titleClass: string;
 }
 
+// Blocks 1-3 share one continuous amber frame; Block 4 (South) gets its own separate blue frame.
 const BLOCK_META: Record<BlockName, BlockMeta> = {
-    North: { titleKey: 'block1Title', icon: '🚪', stairwellKey: 'stairwell1', stairwellEndKey: null, titlePosition: 'top', borderClass: 'border-2 border-amber-500', titleClass: 'text-amber-400' },
-    Second: { titleKey: 'block2Title', icon: '', stairwellKey: null, stairwellEndKey: null, titlePosition: 'top', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    Third: { titleKey: 'block3Title', icon: '', stairwellKey: null, stairwellEndKey: 'stairwell2', titlePosition: 'top', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    South: { titleKey: 'block4Title', icon: '🏢', stairwellKey: 'stairwell3', stairwellEndKey: null, titlePosition: 'bottom', borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
+    North: { titleKey: 'block1Title', icon: '🏢', stairwellKey: 'stairwell1', stairwellEndKey: null, titlePosition: 'top', titleClass: 'text-amber-400' },
+    Second: { titleKey: 'block2Title', icon: '', stairwellKey: null, stairwellEndKey: null, titlePosition: 'top', titleClass: 'text-amber-400' },
+    Third: { titleKey: 'block3Title', icon: '', stairwellKey: null, stairwellEndKey: 'stairwell2', titlePosition: 'top', titleClass: 'text-amber-400' },
+    South: { titleKey: 'block4Title', icon: '🏢', stairwellKey: 'stairwell3', stairwellEndKey: null, titlePosition: 'bottom', titleClass: 'text-blue-400' },
+};
+
+const FRAME_CLASS: Record<BlockName, string> = {
+    North: 'rounded-t-2xl border-t-2 border-x-2 border-amber-500',
+    Second: 'border-x-2 border-amber-500',
+    Third: 'border-x-2 border-b-2 border-amber-500',
+    South: 'rounded-2xl border-2 border-blue-500',
 };
 
 type Connector = 'hallway' | 'courtyard' | null;
@@ -28,7 +35,7 @@ type Connector = 'hallway' | 'courtyard' | null;
     template: `
     <div class="space-y-0" dir="ltr">
       @for (row of rows(); track row.block) {
-          <div class="rounded-xl p-2.5 sm:p-3 bg-slate-800" [class]="meta(row.block).borderClass">
+          <div class="p-2.5 sm:p-3 bg-slate-800" [class]="frameClass(row.block)">
             @if (meta(row.block).titlePosition === 'top') {
               <p class="text-center text-xs font-bold mb-1.5" [class]="meta(row.block).titleClass">
                 {{ meta(row.block).icon }} {{ t.t(meta(row.block).titleKey) }}
@@ -106,7 +113,7 @@ type Connector = 'hallway' | 'courtyard' | null;
           </div>
 
           @if (row.connectorAfter === 'hallway') {
-            <div class="flex flex-col items-center py-1">
+            <div class="flex flex-col items-center py-1 border-x-2 border-amber-500 bg-slate-800">
               <div class="w-1 h-3 bg-slate-600"></div>
               <div class="px-4 py-1 rounded-full bg-slate-900 border border-slate-600 text-[10px] text-slate-400 font-bold tracking-wide whitespace-nowrap">
                 ═ {{ t.t('hallway') }} ═
@@ -205,6 +212,10 @@ export class BuildingPlanComponent {
 
     meta(block: BlockName): BlockMeta {
         return BLOCK_META[block];
+    }
+
+    frameClass(block: BlockName): string {
+        return FRAME_CLASS[block];
     }
 
     hasInfo(apt: Apartment): boolean {
