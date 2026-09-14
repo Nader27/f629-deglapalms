@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { Apartment, BLOCKS_TOP_TO_BOTTOM, BlockName, FloorName, MAINTENANCE_FEE, apartmentSide } from '../models/building';
+import { Transaction } from '../services/finance.service';
 
 interface BlockMeta {
     title: string;
@@ -127,6 +128,24 @@ type Connector = 'hallway' | 'courtyard' | null;
               </span>
             </p>
             <p class="mb-1">{{ hasInfo(apt) ? (apt.is_rented ? 'Rented' : 'Owner-occupied') : 'No info on file' }}</p>
+            @if (!apt.has_paid && paymentUrl()) {
+              <a [href]="paymentUrl()" target="_blank" rel="noopener"
+                class="block text-center mt-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+                💳 Pay Maintenance ({{ fee }} LE)
+              </a>
+            }
+            @if (aptPayments(apt).length) {
+              <div class="mt-3 rounded-lg bg-slate-900/60 border border-slate-700 p-3">
+                <p class="text-xs text-slate-400 uppercase mb-1">Payments Linked to This Apartment</p>
+                <p class="text-emerald-400 font-bold text-lg mb-2">{{ aptPaymentsTotal(apt) }} LE</p>
+                @for (t of aptPayments(apt); track t.id) {
+                  <div class="flex justify-between text-xs text-slate-300 py-0.5">
+                    <span>{{ t.title }}</span>
+                    <span>{{ t.amount }} LE</span>
+                  </div>
+                }
+              </div>
+            }
             @if (showPersonalInfo()) {
               <hr class="my-2 border-slate-700" />
               @if (apt.is_rented) {
@@ -157,6 +176,8 @@ export class BuildingPlanComponent {
     floor = input.required<FloorName>();
     showPersonalInfo = input(false);
     editable = input(false);
+    transactions = input<Transaction[]>([]);
+    paymentUrl = input<string | null>(null);
     edit = output<Apartment>();
 
     hovered = signal<Apartment | null>(null);
@@ -179,6 +200,14 @@ export class BuildingPlanComponent {
 
     hasInfo(apt: Apartment): boolean {
         return !!(apt.resident_name?.trim() || apt.owner_name?.trim());
+    }
+
+    aptPayments(apt: Apartment): Transaction[] {
+        return this.transactions().filter(t => t.type === 'income' && t.apt_number === apt.apt_number);
+    }
+
+    aptPaymentsTotal(apt: Apartment): number {
+        return this.aptPayments(apt).reduce((sum, t) => sum + Number(t.amount), 0);
     }
 
     tileClasses(apt: Apartment): string {

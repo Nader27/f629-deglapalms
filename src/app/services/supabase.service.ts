@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { Apartment } from '../models/building';
+import { AppSettings, DEFAULT_SETTINGS } from '../models/settings';
 
 export interface Transaction {
     id?: string;
@@ -84,5 +85,21 @@ export class SupabaseService {
         if (error) throw error;
         const { data } = this.client.storage.from('receipts').getPublicUrl(path);
         return data.publicUrl;
+    }
+
+    // --- Settings ---
+    async getSettings(): Promise<AppSettings> {
+        const { data, error } = await this.client.from('app_settings').select('*').eq('id', true).maybeSingle();
+        if (error || !data) return DEFAULT_SETTINGS;
+        return data;
+    }
+
+    async updateSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+        const { data, error } = await this.client
+            .from('app_settings')
+            .upsert({ id: true, ...patch }, { onConflict: 'id' })
+            .select();
+        if (error) throw error;
+        return data![0];
     }
 }

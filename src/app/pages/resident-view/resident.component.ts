@@ -10,6 +10,7 @@ import {
     MAINTENANCE_FEE,
     generateBuildingLayout,
 } from '../../models/building';
+import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
 
 @Component({
     selector: 'app-resident-view',
@@ -22,7 +23,13 @@ import {
           <h1 class="text-2xl font-bold">🏢 Building Maintenance Tracker</h1>
           <p class="text-slate-400 text-sm">Maintenance fee: {{ fee }} LE per apartment</p>
         </div>
-        <a routerLink="/admin/login" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm">Manager Login</a>
+        <div class="flex gap-2">
+          @if (settings().whatsapp_url) {
+            <a [href]="settings().whatsapp_url" target="_blank" rel="noopener"
+              class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm">💬 WhatsApp Group</a>
+          }
+          <a routerLink="/admin/login" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm">Manager Login</a>
+        </div>
       </header>
 
       <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -60,7 +67,7 @@ import {
       @if (loading()) {
         <p class="text-slate-400">Loading building layout…</p>
       } @else {
-        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [showPersonalInfo]="false" [editable]="false" />
+        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [paymentUrl]="settings().payment_url" [showPersonalInfo]="false" [editable]="false" />
       }
     </div>
   `,
@@ -72,6 +79,7 @@ export class ResidentComponent implements OnInit {
     loading = signal(true);
     selectedFloor = signal<FloorName>('Ground');
     apartments = signal<Apartment[]>([]);
+    settings = signal<AppSettings>(DEFAULT_SETTINGS);
 
     progress = computed(() => {
         const list = this.apartments();
@@ -83,7 +91,15 @@ export class ResidentComponent implements OnInit {
     constructor(private supabase: SupabaseService, public finance: FinanceService) { }
 
     async ngOnInit() {
-        await Promise.all([this.load(), this.finance.loadTransactions()]);
+        await Promise.all([this.load(), this.finance.loadTransactions(), this.loadSettings()]);
+    }
+
+    async loadSettings() {
+        try {
+            this.settings.set(await this.supabase.getSettings());
+        } catch {
+            this.settings.set(DEFAULT_SETTINGS);
+        }
     }
 
     async load() {

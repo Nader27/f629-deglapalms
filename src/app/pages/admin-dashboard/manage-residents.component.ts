@@ -2,8 +2,10 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
+import { FinanceService } from '../../services/finance.service';
 import { BuildingPlanComponent } from '../../components/building-plan.component';
 import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout } from '../../models/building';
+import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
 
 @Component({
     selector: 'app-manage-residents',
@@ -31,6 +33,26 @@ import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout }
           </button>
         </div>
       }
+
+      <div class="mb-6 p-4 rounded-lg bg-white border border-slate-200">
+        <p class="text-sm font-semibold text-slate-800 mb-3">Links shown to residents</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Payment URL (shown as "Pay Maintenance" on unpaid apartments)</label>
+            <input [(ngModel)]="settingsForm.payment_url" placeholder="https://..."
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">WhatsApp Group URL</label>
+            <input [(ngModel)]="settingsForm.whatsapp_url" placeholder="https://chat.whatsapp.com/..."
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <button (click)="saveSettings()" [disabled]="savingSettings()"
+          class="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-500 disabled:opacity-50">
+          {{ savingSettings() ? 'Saving…' : 'Save Links' }}
+        </button>
+      </div>
 
       <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
@@ -66,7 +88,7 @@ import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout }
             </button>
           }
         </div>
-        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
+        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
@@ -176,6 +198,8 @@ export class ManageResidentsComponent implements OnInit {
     loading = signal(true);
     seeding = signal(false);
     saving = signal(false);
+    settingsForm: AppSettings = { ...DEFAULT_SETTINGS };
+    savingSettings = signal(false);
 
     needsSeed = computed(() => !this.loading() && this.apartments().length === 0);
 
@@ -200,10 +224,24 @@ export class ManageResidentsComponent implements OnInit {
         };
     });
 
-    constructor(private supabase: SupabaseService) { }
+    constructor(private supabase: SupabaseService, public finance: FinanceService) { }
 
     async ngOnInit() {
-        await this.load();
+        await Promise.all([this.load(), this.finance.loadTransactions(), this.loadSettings()]);
+    }
+
+    async loadSettings() {
+        try {
+            this.settingsForm = await this.supabase.getSettings();
+        } catch {
+            this.settingsForm = { ...DEFAULT_SETTINGS };
+        }
+    }
+
+    async saveSettings() {
+        this.savingSettings.set(true);
+        this.settingsForm = await this.supabase.updateSettings(this.settingsForm);
+        this.savingSettings.set(false);
     }
 
     async load() {
@@ -222,8 +260,10 @@ export class ManageResidentsComponent implements OnInit {
     }
 
     async togglePaid(apt: Apartment) {
+        const wasPaid = apt.has_paid;
         const updated = await this.supabase.updateApartment(apt.apt_number, { has_paid: !apt.has_paid });
         this.patchLocal(updated);
+        if (!wasPaid && updated.has_paid) await this.recordMaintenancePayment(updated);
     }
 
     async toggleRented(apt: Apartment) {
@@ -244,10 +284,21 @@ export class ManageResidentsComponent implements OnInit {
         const apt = this.editing();
         if (!apt) return;
         this.saving.set(true);
+        const wasPaid = apt.has_paid;
         const updated = await this.supabase.updateApartment(apt.apt_number, this.editForm);
         this.patchLocal(updated);
+        if (!wasPaid && updated.has_paid) await this.recordMaintenancePayment(updated);
         this.saving.set(false);
         this.closeEdit();
+    }
+
+    private async recordMaintenancePayment(apt: Apartment) {
+        await this.finance.addTransaction({
+            type: 'income',
+            amount: this.fee,
+            title: `Maintenance - Apt ${apt.apt_number}`,
+            apt_number: apt.apt_number,
+        });
     }
 
     private patchLocal(updated: Apartment) {

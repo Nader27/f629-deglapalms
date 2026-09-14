@@ -34,3 +34,16 @@ CREATE POLICY "Public Read Transactions" ON transactions FOR SELECT USING (true)
 -- Allow ONLY LOGGED-IN ADMINS to INSERT, UPDATE, DELETE
 CREATE POLICY "Admin Full Access Apartments" ON apartments FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Admin Full Access Transactions" ON transactions FOR ALL USING (auth.role() = 'authenticated');
+
+-- 4. App Settings (single row: payment link + WhatsApp group link, admin-configurable)
+CREATE TABLE app_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id), -- forces exactly one row
+  payment_url TEXT,
+  whatsapp_url TEXT
+);
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read Settings" ON app_settings FOR SELECT USING (true);
+CREATE POLICY "Admin Full Access Settings" ON app_settings FOR ALL USING (auth.role() = 'authenticated');
+
+INSERT INTO app_settings (id, payment_url, whatsapp_url) VALUES (true, NULL, NULL);
