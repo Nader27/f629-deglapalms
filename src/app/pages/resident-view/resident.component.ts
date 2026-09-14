@@ -2,9 +2,9 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 import { FinanceService } from '../../services/finance.service';
+import { BuildingPlanComponent } from '../../components/building-plan.component';
 import {
     Apartment,
-    BLOCKS_TOP_TO_BOTTOM,
     FLOORS,
     FloorName,
     MAINTENANCE_FEE,
@@ -14,7 +14,7 @@ import {
 @Component({
     selector: 'app-resident-view',
     standalone: true,
-    imports: [RouterLink],
+    imports: [RouterLink, BuildingPlanComponent],
     template: `
     <div class="min-h-screen bg-slate-900 text-white p-6">
       <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -58,24 +58,7 @@ import {
       @if (loading()) {
         <p class="text-slate-400">Loading building layout…</p>
       } @else {
-        <div class="space-y-3">
-          @for (block of blocks; track block) {
-            <div class="bg-slate-800 rounded-xl border border-slate-700 p-4">
-              <p class="text-xs text-slate-400 uppercase mb-2">{{ block }} Block</p>
-              <div class="flex flex-wrap gap-2">
-                @for (apt of aptsFor(block); track apt.apt_number) {
-                  <div
-                    class="min-w-[72px] text-center rounded-lg px-3 py-2 text-sm font-semibold"
-                    [class.bg-slate-600]="apt.is_gate"
-                    [class.bg-emerald-600]="!apt.is_gate && apt.has_paid"
-                    [class.bg-red-600]="!apt.is_gate && !apt.has_paid">
-                    {{ apt.is_gate ? 'GATE' : apt.apt_number }}
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
+        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [showPersonalInfo]="false" [editable]="false" />
       }
     </div>
   `,
@@ -83,7 +66,6 @@ import {
 export class ResidentComponent implements OnInit {
     readonly fee = MAINTENANCE_FEE;
     readonly floors = FLOORS;
-    readonly blocks = BLOCKS_TOP_TO_BOTTOM;
 
     loading = signal(true);
     selectedFloor = signal<FloorName>('Ground');
@@ -115,11 +97,5 @@ export class ResidentComponent implements OnInit {
         const merged = layout.map(slot => savedByNumber.get(slot.apt_number) ?? slot);
         this.apartments.set(merged);
         this.loading.set(false);
-    }
-
-    aptsFor(block: (typeof this.blocks)[number]): Apartment[] {
-        return this.apartments()
-            .filter(a => a.floor === this.selectedFloor() && a.block === block)
-            .sort((a, b) => a.apt_number.localeCompare(b.apt_number));
     }
 }

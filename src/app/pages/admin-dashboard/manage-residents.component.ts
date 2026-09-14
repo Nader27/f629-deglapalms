@@ -2,12 +2,13 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
-import { Apartment, MAINTENANCE_FEE, generateBuildingLayout } from '../../models/building';
+import { BuildingPlanComponent } from '../../components/building-plan.component';
+import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, generateBuildingLayout } from '../../models/building';
 
 @Component({
     selector: 'app-manage-residents',
     standalone: true,
-    imports: [FormsModule, RouterLink],
+    imports: [FormsModule, RouterLink, BuildingPlanComponent],
     template: `
     <div class="min-h-screen bg-slate-100 p-6">
       <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -52,6 +53,21 @@ import { Apartment, MAINTENANCE_FEE, generateBuildingLayout } from '../../models
 
       <input type="text" [(ngModel)]="searchTerm" placeholder="Search by apartment number, resident or owner…"
         class="w-full mb-4 rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+
+      <div class="bg-slate-900 rounded-xl p-4 mb-6">
+        <div class="flex gap-2 mb-4 overflow-x-auto">
+          @for (floor of floors; track floor) {
+            <button (click)="selectedFloor.set(floor)"
+              class="px-4 py-2 rounded-lg text-sm whitespace-nowrap"
+              [class.bg-indigo-600]="selectedFloor() === floor"
+              [class.bg-slate-800]="selectedFloor() !== floor"
+              [class.text-white]="true">
+              {{ floor }}
+            </button>
+          }
+        </div>
+        <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
+      </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
         <table class="w-full text-sm">
@@ -139,9 +155,11 @@ import { Apartment, MAINTENANCE_FEE, generateBuildingLayout } from '../../models
 })
 export class ManageResidentsComponent implements OnInit {
     readonly fee = MAINTENANCE_FEE;
+    readonly floors = FLOORS;
 
     apartments = signal<Apartment[]>([]);
     searchTerm = '';
+    selectedFloor = signal<FloorName>('Ground');
     editing = signal<Apartment | null>(null);
     editForm: Partial<Apartment> = {};
     loading = signal(true);
