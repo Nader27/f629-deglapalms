@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Maintenance Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        /* Custom smooth scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .pulse-glow-green {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+        }
+        .pulse-glow-red {
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-4 sm:px-8">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
+                    <i class="fa-solid fa-building-user text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                        Building Maintenance Tracker
+                        <span class="text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full">2,000 LE</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">4 Connected Blocks • 67 Total Apartments</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <!-- Search Input -->
+                <div class="relative flex-1 md:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Search apt # or resident..." 
+                           class="w-full bg-slate-800/80 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all">
+                </div>
+
+                <!-- Export CSV Button -->
+                <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all" title="Export as CSV sheet">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                    <span class="hidden sm:inline">Export</span>
+                </button>
+
+                <!-- Admin Mode Toggle Button -->
+                <button id="adminToggleBtn" onclick="toggleAdminMode()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
+                    <i id="adminLockIcon" class="fa-solid fa-lock text-amber-400"></i>
+                    <span id="adminBtnText">Manager Mode</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+
+        <!-- Financial Summary Dashboard -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Collected -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Collected</span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                        <i class="fa-solid fa-money-bill-wave text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-baseline gap-2">
+                    <span id="totalCollectedVal" class="text-2xl font-black text-emerald-400">0</span>
+                    <span class="text-xs text-slate-400 font-semibold">LE</span>
+                </div>
+                <p id="totalCollectedSub" class="text-xs text-slate-400 mt-1">Out of 134,000 LE Target</p>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500/20">
+                    <div id="collectedProgressBar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Paid Progress -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Paid Apartments</span>
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center">
+                        <i class="fa-solid fa-circle-check text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-baseline gap-2">
+                    <span id="paidCountVal" class="text-2xl font-black text-sky-400">0</span>
+                    <span id="totalAptsVal" class="text-xs text-slate-400 font-semibold">/ 67 Apts</span>
+                </div>
+                <div class="mt-2 w-full bg-slate-700/50 h-2 rounded-full overflow-hidden">
+                    <div id="paidRatioBar" class="h-full bg-sky-500 transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Pending Amount -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Unpaid Remaining</span>
+                    <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                        <i class="fa-solid fa-clock text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-baseline gap-2">
+                    <span id="unpaidAmountVal" class="text-2xl font-black text-rose-400">0</span>
+                    <span class="text-xs text-slate-400 font-semibold">LE</span>
+                </div>
+                <p id="unpaidCountSub" class="text-xs text-slate-400 mt-1">0 apartments pending</p>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-rose-500/20">
+                    <div id="unpaidProgressBar" class="h-full bg-rose-500 transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Occupancy & Rental Stats -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Rental Occupancy</span>
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                        <i class="fa-solid fa-key text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-baseline gap-2">
+                    <span id="rentedCountVal" class="text-2xl font-black text-amber-400">0</span>
+                    <span class="text-xs text-slate-400 font-semibold">Rented Apts</span>
+                </div>
+                <p id="ownerOccupiedSub" class="text-xs text-slate-400 mt-1">0 Owner Occupied</p>
+            </div>
+        </section>
+
+        <!-- Floor Tabs & Filter Switcher -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <!-- Floor Selection Buttons -->
+            <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
+                <button onclick="switchFloor('Ground')" id="tab-Ground" class="floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-sky-600 text-white shadow-lg shadow-sky-600/30">
+                    <i class="fa-solid fa-door-open mr-1.5"></i>Ground (15)
+                </button>
+                <button onclick="switchFloor('1st Floor')" id="tab-1st Floor" class="floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-slate-800 text-slate-400 hover:bg-slate-700">
+                    1st Floor (16)
+                </button>
+                <button onclick="switchFloor('2nd Floor')" id="tab-2nd Floor" class="floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-slate-800 text-slate-400 hover:bg-slate-700">
+                    2nd Floor (16)
+                </button>
+                <button onclick="switchFloor('3rd Floor')" id="tab-3rd Floor" class="floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-slate-800 text-slate-400 hover:bg-slate-700">
+                    3rd Floor (16)
+                </button>
+                <button onclick="switchFloor('Roof')" id="tab-Roof" class="floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-slate-800 text-slate-400 hover:bg-slate-700">
+                    <i class="fa-solid fa-building-flag mr-1.5"></i>Roof (4)
+                </button>
+            </div>
+
+            <!-- Status Quick Filters -->
+            <div class="flex items-center gap-2 self-start md:self-auto">
+                <span class="text-xs text-slate-500 font-medium">Filter:</span>
+                <select id="statusFilter" onchange="applyFilters()" class="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-sky-500">
+                    <option value="ALL">All Statuses</option>
+                    <option value="PAID">Paid Only</option>
+                    <option value="UNPAID">Unpaid Only</option>
+                    <option value="RENTED">Rented Only</option>
+                    <option value="OWNER">Owner Occupied</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Search Results View (Hidden by default, active when typing in search) -->
+        <div id="searchResultsContainer" class="hidden space-y-4">
+            <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-sky-400"></i> Search Results
+            </h3>
+            <div id="searchResultsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+        </div>
+
+        <!-- 4-Block Building Architectural Blueprint View -->
+        <div id="buildingBlueprintContainer" class="max-w-4xl mx-auto space-y-6">
+
+            <div class="flex items-center justify-between text-xs text-slate-400 font-mono px-2">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrow-up text-sky-400"></i> LEFT SIDE (NORTHBOUND)</span>
+                <span id="currentFloorHeader" class="text-sm font-bold text-white uppercase tracking-widest bg-slate-800 px-4 py-1 rounded-full border border-slate-700">GROUND FLOOR PLAN</span>
+                <span class="flex items-center gap-1.5">RIGHT SIDE (SOUTHBOUND) <i class="fa-solid fa-arrow-down text-sky-400"></i></span>
+            </div>
+
+            <!-- Block 1: North Block (Top) -->
+            <div id="block-1" class="building-block bg-slate-800/40 border border-slate-700/80 rounded-3xl p-5 shadow-xl relative backdrop-blur-md">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                    North Block (Top)
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <!-- Left Side Apts -->
+                    <div id="block1-left" class="space-y-2.5"></div>
+                    <!-- Right Side Apts -->
+                    <div id="block1-right" class="space-y-2.5"></div>
+                </div>
+            </div>
+
+            <!-- Central Spine Link Line 1-2 -->
+            <div class="flex justify-center -my-3">
+                <div class="w-1 h-6 bg-gradient-to-b from-sky-500/50 to-indigo-500/50 rounded-full"></div>
+            </div>
+
+            <!-- Block 2: 2nd Block -->
+            <div id="block-2" class="building-block bg-slate-800/40 border border-slate-700/80 rounded-3xl p-5 shadow-xl relative backdrop-blur-md">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                    2nd Block
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <!-- Left Side Apts -->
+                    <div id="block2-left" class="space-y-2.5"></div>
+                    <!-- Right Side Apts -->
+                    <div id="block2-right" class="space-y-2.5"></div>
+                </div>
+            </div>
+
+            <!-- Central Spine Link Line 2-3 -->
+            <div class="flex justify-center -my-3">
+                <div class="w-1 h-6 bg-gradient-to-b from-indigo-500/50 to-sky-500/50 rounded-full"></div>
+            </div>
+
+            <!-- Block 3: 3rd Block -->
+            <div id="block-3" class="building-block bg-slate-800/40 border border-slate-700/80 rounded-3xl p-5 shadow-xl relative backdrop-blur-md">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                    3rd Block
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <!-- Left Side Apts -->
+                    <div id="block3-left" class="space-y-2.5"></div>
+                    <!-- Right Side Apts -->
+                    <div id="block3-right" class="space-y-2.5"></div>
+                </div>
+            </div>
+
+            <!-- Central Spine Link Line 3-4 -->
+            <div class="flex justify-center -my-3">
+                <div class="w-1 h-6 bg-gradient-to-b from-sky-500/50 to-emerald-500/50 rounded-full"></div>
+            </div>
+
+            <!-- Block 4: South Block (Bottom) -->
+            <div id="block-4" class="building-block bg-slate-800/40 border border-slate-700/80 rounded-3xl p-5 shadow-xl relative backdrop-blur-md">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                    South Block (Bottom)
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <!-- Left Side Apts -->
+                    <div id="block4-left" class="space-y-2.5"></div>
+                    <!-- Right Side Apts -->
+                    <div id="block4-right" class="space-y-2.5"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Apartment Details & Edit Modal -->
+    <div id="aptModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-all">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl relative space-y-6">
+            
+            <!-- Close Button -->
+            <button onclick="closeModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
+                <div id="modalAptIcon" class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center text-xl font-black">
+                    101
+                </div>
+                <div>
+                    <h2 id="modalAptTitle" class="text-xl font-black text-white">Apartment 101</h2>
+                    <p id="modalAptFloor" class="text-xs text-slate-400 font-medium">1st Floor • North Block (Right Side)</p>
+                </div>
+            </div>
+
+            <!-- Form Body -->
+            <form id="aptForm" onsubmit="saveAptDetails(event)" class="space-y-4">
+                
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Resident Name</label>
+                    <input type="text" id="inputResidentName" placeholder="e.g. Ahmed Hassan" 
+                           class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Resident Phone</label>
+                        <input type="text" id="inputResidentPhone" placeholder="01012345678" 
+                               class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Owner Name</label>
+                        <input type="text" id="inputOwnerName" placeholder="e.g. Mohamed Ali" 
+                               class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    </div>
+                </div>
+
+                <!-- Checkbox Switches -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    
+                    <!-- Is Rented Toggle -->
+                    <label class="flex items-center justify-between p-3.5 bg-slate-800/80 border border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-800 transition-all">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                            <i class="fa-solid fa-key text-amber-400"></i> Is Rented?
+                        </span>
+                        <input type="checkbox" id="inputIsRented" class="w-5 h-5 accent-amber-500 rounded cursor-pointer disabled:opacity-60">
+                    </label>
+
+                    <!-- Maintenance Paid Switch -->
+                    <label id="paidToggleBox" class="flex items-center justify-between p-3.5 bg-slate-800/80 border border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-800 transition-all">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                            <i class="fa-solid fa-money-check-dollar text-emerald-400"></i> 2,000 LE Paid
+                        </span>
+                        <input type="checkbox" id="inputHasPaid" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer disabled:opacity-60">
+                    </label>
+                </div>
+
+                <!-- Read Only Notice for Residents -->
+                <div id="readOnlyNotice" class="hidden text-center text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 font-medium">
+                    <i class="fa-solid fa-info-circle mr-1"></i> Read-Only View. Switch to Manager Mode to edit details.
+                </div>
+
+                <!-- Action Button for Admin -->
+                <div id="adminActionButtons" class="pt-2">
+                    <button type="submit" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-sky-600/30 transition-all text-sm">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin PIN Authentication Modal -->
+    <div id="adminPinModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-xs rounded-3xl p-6 text-center shadow-2xl space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto text-lg">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-black text-white">Manager Security PIN</h3>
+                <p class="text-xs text-slate-400 mt-1">Enter PIN code to edit building payments (Default PIN: <strong class="text-sky-400 font-mono">1234</strong>)</p>
+            </div>
+
+            <form onsubmit="verifyAdminPin(event)" class="space-y-4">
+                <input type="password" id="pinInput" maxLength="4" placeholder="••••" required
+                       class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-center text-2xl font-mono tracking-widest text-white focus:outline-none focus:border-amber-500">
+                
+                <div id="pinErrorMsg" class="hidden text-xs text-rose-400 font-semibold">
+                    Incorrect PIN. Please try again.
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeAdminPinModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 py-2.5 rounded-xl text-xs font-bold text-slate-300 transition-all">
+                        Cancel
+                    </button>
+                    <button type="submit" class="w-1/2 bg-amber-500 hover:bg-amber-400 py-2.5 rounded-xl text-xs font-bold text-slate-950 transition-all">
+                        Authorize
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Popup -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-bold">
+            <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+            <span id="toastMsg">Action completed successfully.</span>
+        </div>
+    </div>
+
+    <script>
+        /* Building Structure Definitions */
+        const FLOORS = ['Ground', '1st Floor', '2nd Floor', '3rd Floor', 'Roof'];
+        
+        // Exact 4-block schema logic for each floor
+        function generateBuildingMap() {
+            return {
+                'Roof': {
+                    block1: { right: [], left: [] },
+                    block2: { right: [], left: ['414', '413'] },
+                    block3: { right: [], left: ['412', '411'] },
+                    block4: { right: [], left: [] }
+                },
+                '3rd Floor': createFloorApts(3),
+                '2nd Floor': createFloorApts(2),
+                '1st Floor': createFloorApts(1),
+                'Ground': {
+                    block1: { right: ['001', '002'], left: ['015'] }, // Slot 016 is Main Gate
+                    block2: { right: ['003', '004'], left: ['014', '013'] },
+                    block3: { right: ['005', '006'], left: ['012', '011'] },
+                    block4: { right: ['007', '008'], left: ['010', '009'] }
+                }
+            };
+        }
+
+        // Helper to construct 16-apartment standard floor
+        function createFloorApts(prefix) {
+            const p = prefix.toString();
+            return {
+                block1: { right: [`${p}01`, `${p}02`], left: [`${p}16`, `${p}15`] },
+                block2: { right: [`${p}03`, `${p}04`], left: [`${p}14`, `${p}13`] },
+                block3: { right: [`${p}05`, `${p}06`], left: [`${p}12`, `${p}11`] },
+                block4: { right: [`${p}07`, `${p}08`], left: [`${p}10`, `${p}09`] }
+            };
+        }
+
+        const STORAGE_KEY = 'building_maintenance_db_v2';
+        const BUILDING_MAP = generateBuildingMap();
+
+        let apartmentData = {};
+        let currentFloor = 'Ground';
+        let isAdminMode = false;
+        let selectedAptNum = null;
+
+        // Initialize App on load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDatabase();
+            renderFloor(currentFloor);
+            updateDashboardStats();
+        });
+
+        // Initialize default mock records or load existing local storage
+        function loadDatabase() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    apartmentData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Error loading localStorage data", e);
+                    initializeDefaultData();
+                }
+            } else {
+                initializeDefaultData();
+            }
+        }
+
+        function initializeDefaultData() {
+            apartmentData = {};
+            const allAptNumbers = getAllAptNumbers();
+            
+            // Sample resident list for realistic demo experience
+            const sampleResidents = [
+                "Ahmad Hassan", "Mohamed Ali", "Mahmoud Ibrahim", "Tarek Zaki", "Omar Farouk",
+                "Khaled Said", "Youssef Nabil", "Mostafa Kamal", "Amr Sameh", "Hassan Hussein",
+                "Karim Atef", "Hazem El-Sayed", "Sherif Badawi", "Wael Fathy", "Eslam Gamal"
+            ];
+
+            allAptNumbers.forEach((apt, idx) => {
+                apartmentData[apt] = {
+                    residentName: sampleResidents[idx % sampleResidents.length] || '',
+                    residentPhone: `010${Math.floor(10000000 + Math.random() * 90000000)}`,
+                    ownerName: sampleResidents[(idx + 3) % sampleResidents.length] || '',
+                    isRented: idx % 3 === 0,
+                    hasPaid: idx % 2 === 0 // Mock 50% initial payment
+                };
+            });
+
+            saveDatabase();
+        }
+
+        function getAllAptNumbers() {
+            let list = [];
+            // Ground (001-015)
+            for (let i = 1; i <= 15; i++) list.push(`0${i < 10 ? '0' + i : i}`);
+            // Floors 1, 2, 3 (101-116, 201-216, 301-316)
+            [1, 2, 3].forEach(f => {
+                for (let i = 1; i <= 16; i++) {
+                    list.push(`${f}${i < 10 ? '0' + i : i}`);
+                }
+            });
+            // Roof
+            list.push('411', '412', '413', '414');
+            return list;
+        }
+
+        function saveDatabase() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(apartmentData));
+            updateDashboardStats();
+        }
+
+        function updateDashboardStats() {
+            const allKeys = Object.keys(apartmentData);
+            const totalApts = allKeys.length;
+            let paidCount = 0;
+            let rentedCount = 0;
+
+            allKeys.forEach(k => {
+                if (apartmentData[k].hasPaid) paidCount++;
+                if (apartmentData[k].isRented) rentedCount++;
+            });
+
+            const totalCollected = paidCount * 2000;
+            const targetAmount = totalApts * 2000;
+            const unpaidCount = totalApts - paidCount;
+            const unpaidAmount = unpaidCount * 2000;
+
+            document.getElementById('totalCollectedVal').innerText = totalCollected.toLocaleString();
+            document.getElementById('totalCollectedSub').innerText = `Out of ${targetAmount.toLocaleString()} LE Target`;
+            document.getElementById('collectedProgressBar').style.width = `${(totalCollected / targetAmount) * 100}%`;
+
+            document.getElementById('paidCountVal').innerText = paidCount;
+            document.getElementById('totalAptsVal').innerText = `/ ${totalApts} Apts`;
+            document.getElementById('paidRatioBar').style.width = `${(paidCount / totalApts) * 100}%`;
+
+            document.getElementById('unpaidAmountVal').innerText = unpaidAmount.toLocaleString();
+            document.getElementById('unpaidCountSub').innerText = `${unpaidCount} apartments pending`;
+            document.getElementById('unpaidProgressBar').style.width = `${(unpaidCount / totalApts) * 100}%`;
+
+            document.getElementById('rentedCountVal').innerText = rentedCount;
+            document.getElementById('ownerOccupiedSub').innerText = `${totalApts - rentedCount} Owner Occupied`;
+        }
+
+        function switchFloor(floorName) {
+            currentFloor = floorName;
+            
+            // Update tab styles
+            FLOORS.forEach(f => {
+                const btn = document.getElementById(`tab-${f}`);
+                if (btn) {
+                    if (f === floorName) {
+                        btn.className = "floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-sky-600 text-white shadow-lg shadow-sky-600/30";
+                    } else {
+                        btn.className = "floor-tab px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap bg-slate-800 text-slate-400 hover:bg-slate-700";
+                    }
+                }
+            });
+
+            document.getElementById('currentFloorHeader').innerText = `${floorName.toUpperCase()} PLAN`;
+            renderFloor(floorName);
+        }
+
+        function renderFloor(floorName) {
+            const floorData = BUILDING_MAP[floorName];
+            if (!floorData) return;
+
+            const blockKeys = ['block1', 'block2', 'block3', 'block4'];
+            const filterValue = document.getElementById('statusFilter').value;
+
+            blockKeys.forEach((blockKey, idx) => {
+                const blockObj = floorData[blockKey];
+                const blockContainer = document.getElementById(`block-${idx + 1}`);
+                const leftDiv = document.getElementById(`${blockKey}-left`);
+                const rightDiv = document.getElementById(`${blockKey}-right`);
+
+                leftDiv.innerHTML = '';
+                rightDiv.innerHTML = '';
+
+                const hasLeft = blockObj.left.length > 0;
+                const hasRight = blockObj.right.length > 0;
+
+                // Hide block if completely empty (e.g. Roof only has block2 and block3)
+                if (!hasLeft && !hasRight) {
+                    blockContainer.classList.add('hidden');
+                    return;
+                } else {
+                    blockContainer.classList.remove('hidden');
+                }
+
+                // Render Left Column Apts
+                blockObj.left.forEach(aptNum => {
+                    if (shouldShowApt(aptNum, filterValue)) {
+                        leftDiv.appendChild(createAptCard(aptNum));
+                    }
+                });
+
+                // Special handling for Ground floor Main Gate slot
+                if (floorName === 'Ground' && blockKey === 'block1') {
+                    const gateDiv = document.createElement('div');
+                    gateDiv.className = "p-3 bg-slate-800/40 border border-dashed border-slate-700 rounded-2xl text-center text-xs font-bold text-slate-500 flex items-center justify-center gap-2";
+                    gateDiv.innerHTML = `<i class="fa-solid fa-torii-gate text-amber-400"></i> Main Building Gate (No 016)`;
+                    leftDiv.appendChild(gateDiv);
+                }
+
+                // Render Right Column Apts
+                blockObj.right.forEach(aptNum => {
+                    if (shouldShowApt(aptNum, filterValue)) {
+                        rightDiv.appendChild(createAptCard(aptNum));
+                    }
+                });
+            });
+        }
+
+        function shouldShowApt(aptNum, filterValue) {
+            const data = apartmentData[aptNum] || {};
+            if (filterValue === 'PAID') return data.hasPaid === true;
+            if (filterValue === 'UNPAID') return data.hasPaid === false;
+            if (filterValue === 'RENTED') return data.isRented === true;
+            if (filterValue === 'OWNER') return data.isRented === false;
+            return true;
+        }
+
+        function createAptCard(aptNum) {
+            const data = apartmentData[aptNum] || { hasPaid: false, residentName: '', isRented: false };
+            const isPaid = data.hasPaid;
+
+            const card = document.createElement('div');
+            card.onclick = () => openAptModal(aptNum);
+
+            card.className = `p-3.5 rounded-2xl border font-bold text-xs flex justify-between items-center cursor-pointer transition-all duration-200 transform hover:-translate-y-0.5 ${
+                isPaid 
+                    ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/50 hover:border-emerald-400 pulse-glow-green' 
+                    : 'bg-rose-950/40 border-rose-500/50 text-rose-300 hover:bg-rose-900/50 hover:border-rose-400 pulse-glow-red'
+            }`;
+
+            card.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl ${isPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'} flex items-center justify-center font-black text-xs">
+                        ${aptNum}
+                    </div>
+                    <div class="text-left">
+                        <div class="text-slate-200 font-semibold text-xs leading-tight">${data.residentName || 'Vacant / Unregistered'}</div>
+                        <div class="text-[10px] text-slate-400 font-normal flex items-center gap-1.5 mt-0.5">
+                            ${data.isRented ? '<span class="text-amber-400 font-semibold"><i class="fa-solid fa-key"></i> Rented</span>' : '<span><i class="fa-solid fa-user-tie"></i> Owner</span>'}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                    isPaid ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }">
+                    <i class="fa-solid ${isPaid ? 'fa-check' : 'fa-xmark'}"></i>
+                    <span>${isPaid ? 'Paid' : 'Unpaid'}</span>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function openAptModal(aptNum) {
+            selectedAptNum = aptNum;
+            const data = apartmentData[aptNum] || { residentName: '', residentPhone: '', ownerName: '', isRented: false, hasPaid: false };
+
+            document.getElementById('modalAptIcon').innerText = aptNum;
+            document.getElementById('modalAptTitle').innerText = `Apartment ${aptNum}`;
+            document.getElementById('modalAptFloor').innerText = getAptFloorAndBlockInfo(aptNum);
+
+            document.getElementById('inputResidentName').value = data.residentName || '';
+            document.getElementById('inputResidentPhone').value = data.residentPhone || '';
+            document.getElementById('inputOwnerName').value = data.ownerName || '';
+            document.getElementById('inputIsRented').checked = !!data.isRented;
+            document.getElementById('inputHasPaid').checked = !!data.hasPaid;
+
+            // Apply Admin or Read-Only mode state
+            const inputs = ['inputResidentName', 'inputResidentPhone', 'inputOwnerName', 'inputIsRented', 'inputHasPaid'];
+            inputs.forEach(id => {
+                document.getElementById(id).disabled = !isAdminMode;
+            });
+
+            if (isAdminMode) {
+                document.getElementById('readOnlyNotice').classList.add('hidden');
+                document.getElementById('adminActionButtons').classList.remove('hidden');
+            } else {
+                document.getElementById('readOnlyNotice').classList.remove('hidden');
+                document.getElementById('adminActionButtons').classList.add('hidden');
+            }
+
+            document.getElementById('aptModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('aptModal').classList.add('hidden');
+            selectedAptNum = null;
+        }
+
+        function saveAptDetails(e) {
+            e.preventDefault();
+            if (!isAdminMode || !selectedAptNum) return;
+
+            apartmentData[selectedAptNum] = {
+                residentName: document.getElementById('inputResidentName').value.trim(),
+                residentPhone: document.getElementById('inputResidentPhone').value.trim(),
+                ownerName: document.getElementById('inputOwnerName').value.trim(),
+                isRented: document.getElementById('inputIsRented').checked,
+                hasPaid: document.getElementById('inputHasPaid').checked
+            };
+
+            saveDatabase();
+            renderFloor(currentFloor);
+            
+            // If search is active, refresh search view
+            const searchVal = document.getElementById('searchInput').value;
+            if (searchVal) handleSearch();
+
+            closeModal();
+            showToast(`Apartment ${selectedAptNum} details updated!`);
+        }
+
+        function getAptFloorAndBlockInfo(aptNum) {
+            if (aptNum.startsWith('4')) return 'Roof • Left Side Middle Blocks';
+            if (aptNum.startsWith('0')) return 'Ground Floor';
+            return `${aptNum.charAt(0)}st/nd/rd Floor`;
+        }
+
+        function toggleAdminMode() {
+            if (isAdminMode) {
+                isAdminMode = false;
+                updateAdminUi();
+                showToast('Switched to Resident Read-Only View');
+            } else {
+                document.getElementById('adminPinModal').classList.remove('hidden');
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinErrorMsg').classList.add('hidden');
+                setTimeout(() => document.getElementById('pinInput').focus(), 100);
+            }
+        }
+
+        function verifyAdminPin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('pinInput').value;
+            if (pin === '1234') { // Default PIN
+                isAdminMode = true;
+                closeAdminPinModal();
+                updateAdminUi();
+                showToast('Manager Mode Activated!');
+            } else {
+                document.getElementById('pinErrorMsg').classList.remove('hidden');
+            }
+        }
+
+        function closeAdminPinModal() {
+            document.getElementById('adminPinModal').classList.add('hidden');
+        }
+
+        function updateAdminUi() {
+            const btn = document.getElementById('adminToggleBtn');
+            const icon = document.getElementById('adminLockIcon');
+            const text = document.getElementById('adminBtnText');
+
+            if (isAdminMode) {
+                btn.className = "bg-amber-500/20 border border-amber-500/50 text-amber-400 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-amber-500/10";
+                icon.className = "fa-solid fa-lock-open text-amber-400";
+                text.innerText = "Manager Active";
+            } else {
+                btn.className = "bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all";
+                icon.className = "fa-solid fa-lock text-amber-400";
+                text.innerText = "Manager Mode";
+            }
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const blueprint = document.getElementById('buildingBlueprintContainer');
+            const searchContainer = document.getElementById('searchResultsContainer');
+            const searchGrid = document.getElementById('searchResultsGrid');
+
+            if (!query) {
+                blueprint.classList.remove('hidden');
+                searchContainer.classList.add('hidden');
+                return;
+            }
+
+            blueprint.classList.add('hidden');
+            searchContainer.classList.remove('hidden');
+            searchGrid.innerHTML = '';
+
+            const matches = Object.keys(apartmentData).filter(aptNum => {
+                const d = apartmentData[aptNum];
+                return aptNum.includes(query) || 
+                       (d.residentName && d.residentName.toLowerCase().includes(query)) ||
+                       (d.ownerName && d.ownerName.toLowerCase().includes(query)) ||
+                       (d.residentPhone && d.residentPhone.includes(query));
+            });
+
+            if (matches.length === 0) {
+                searchGrid.innerHTML = `<div class="col-span-full text-center text-slate-500 py-8 text-xs">No matching apartments found.</div>`;
+                return;
+            }
+
+            matches.forEach(aptNum => {
+                searchGrid.appendChild(createAptCard(aptNum));
+            });
+        }
+
+        function applyFilters() {
+            renderFloor(currentFloor);
+        }
+
+        // Export data to CSV for Excel view
+        function exportToCSV() {
+            let csv = 'Apartment Number,Resident Name,Resident Phone,Owner Name,Is Rented,Maintenance Paid (2000 LE)\n';
+            Object.keys(apartmentData).forEach(apt => {
+                const d = apartmentData[apt];
+                csv += `"${apt}","${d.residentName || ''}","${d.residentPhone || ''}","${d.ownerName || ''}","${d.isRented ? 'Yes' : 'No'}","${d.hasPaid ? 'Paid' : 'Unpaid'}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', `Building_Maintenance_Payments_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('CSV Exported Successfully!');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMsg').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
