@@ -84,6 +84,7 @@ import { SupabaseService } from '../../services/supabase.service';
               <th class="text-left px-4 py-3">Type</th>
               <th class="text-left px-4 py-3">Amount</th>
               <th class="text-left px-4 py-3">Image</th>
+              <th class="text-left px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -107,18 +108,76 @@ import { SupabaseService } from '../../services/supabase.service';
                     —
                   }
                 </td>
+                <td class="px-4 py-2 whitespace-nowrap">
+                  <button (click)="openEdit(t)" class="text-indigo-600 hover:underline text-xs mr-3">Edit</button>
+                  <button (click)="remove(t)" class="text-red-600 hover:underline text-xs">Delete</button>
+                </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
     </div>
+
+    @if (editing(); as t) {
+      <div class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <h2 class="text-lg font-bold text-slate-800 mb-4">Edit Transaction</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Title</label>
+              <input [(ngModel)]="editForm.title" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Amount (LE)</label>
+              <input type="number" [(ngModel)]="editForm.amount" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Type</label>
+              <select [(ngModel)]="editForm.type" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Related Apartment (optional)</label>
+              <input [(ngModel)]="editForm.apt_number" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Replace Image (optional)</label>
+              <input type="file" accept="image/*" (change)="onEditFileSelected($event)" class="w-full text-sm" />
+              @if (editForm.receipt_url) {
+                <img [src]="editForm.receipt_url" alt="" class="w-16 h-16 object-cover rounded mt-2 border border-slate-200" />
+              }
+            </div>
+          </div>
+
+          @if (editErrorMessage()) {
+            <p class="text-red-500 text-sm mt-3">{{ editErrorMessage() }}</p>
+          }
+
+          <div class="flex justify-end gap-3 mt-6">
+            <button (click)="closeEdit()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Cancel</button>
+            <button (click)="saveEdit()" [disabled]="savingEdit()"
+              class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-500 disabled:opacity-50">
+              {{ savingEdit() ? 'Saving…' : 'Save' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class ManageFinanceComponent implements OnInit {
     saving = signal(false);
     errorMessage = signal('');
     selectedFile: File | null = null;
+
+    editing = signal<Transaction | null>(null);
+    editForm: Partial<Transaction> = {};
+    editFile: File | null = null;
+    savingEdit = signal(false);
+    editErrorMessage = signal('');
 
     form: { title: string; amount: number | null; type: 'income' | 'expense'; apt_number: string } = {
         title: '',
@@ -168,5 +227,54 @@ export class ManageFinanceComponent implements OnInit {
         } finally {
             this.saving.set(false);
         }
+    }
+
+    openEdit(t: Transaction) {
+        this.editing.set(t);
+        this.editForm = { ...t };
+        this.editFile = null;
+        this.editErrorMessage.set('');
+    }
+
+    closeEdit() {
+        this.editing.set(null);
+    }
+
+    onEditFileSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        this.editFile = input.files?.[0] ?? null;
+    }
+
+    async saveEdit() {
+        const t = this.editing();
+        if (!t?.id || !this.editForm.title || !this.editForm.amount) {
+            this.editErrorMessage.set('Title and amount are required.');
+            return;
+        }
+        this.savingEdit.set(true);
+        this.editErrorMessage.set('');
+
+        try {
+            if (this.editFile) {
+                this.editForm.receipt_url = await this.supabase.uploadReceipt(this.editFile);
+            }
+            await this.finance.updateTransaction(t.id, {
+                title: this.editForm.title,
+                amount: this.editForm.amount,
+                type: this.editForm.type,
+                apt_number: this.editForm.apt_number || null,
+                receipt_url: this.editForm.receipt_url,
+            });
+            this.closeEdit();
+        } catch {
+            this.editErrorMessage.set('Failed to save changes. Please try again.');
+        } finally {
+            this.savingEdit.set(false);
+        }
+    }
+
+    async remove(t: Transaction) {
+        if (!t.id || !confirm(`Delete "${t.title}"? This cannot be undone.`)) return;
+        await this.finance.deleteTransaction(t.id);
     }
 }

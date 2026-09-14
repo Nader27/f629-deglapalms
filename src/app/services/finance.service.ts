@@ -34,4 +34,14 @@ export class FinanceService {
     const created = await this.supabase.addTransaction(transaction);
     this.transactions.update(prev => [created, ...prev]);
   }
+
+  async updateTransaction(id: string, patch: Partial<Transaction>) {
+    const updated = await this.supabase.updateTransaction(id, patch);
+    this.transactions.update(prev => prev.map(t => (t.id === id ? updated : t)));
+  }
+
+  async deleteTransaction(id: string) {
+    await this.supabase.deleteTransaction(id);
+    this.transactions.update(prev => prev.filter(t => t.id !== id));
+  }
 }

@@ -79,6 +79,17 @@ export class SupabaseService {
         return data![0];
     }
 
+    async updateTransaction(id: string, patch: Partial<Transaction>): Promise<Transaction> {
+        const { data, error } = await this.client.from('transactions').update(patch).eq('id', id).select();
+        if (error) throw error;
+        return data![0];
+    }
+
+    async deleteTransaction(id: string) {
+        const { error } = await this.client.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+    }
+
     async uploadReceipt(file: File): Promise<string> {
         const path = `${Date.now()}_${file.name}`;
         const { error } = await this.client.storage.from('receipts').upload(path, file);
