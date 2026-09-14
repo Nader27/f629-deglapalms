@@ -37,10 +37,12 @@ import {
             <div class="h-full bg-emerald-500" [style.width.%]="progress().percent"></div>
           </div>
         </div>
-        <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 flex items-center gap-4 text-xs">
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Paid</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span> Unpaid</span>
+        <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 flex flex-wrap items-center gap-3 text-xs">
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-sky-700 inline-block"></span> Owner-occupied</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-violet-700 inline-block"></span> Rented</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-700 inline-block"></span> No info</span>
           <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-600 inline-block"></span> Gate</span>
+          <span class="flex items-center gap-1">✓ Paid</span>
         </div>
       </section>
 
