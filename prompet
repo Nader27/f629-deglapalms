@@ -1,0 +1,64 @@
+Act as a Senior Angular Developer. Generate the complete implementation for the missing components, services, and routing of an Angular 18+ Building Maintenance Tracker web app using Standalone Components, Angular Signals, Tailwind CSS, and Supabase.
+
+### 1. Project Context & Tech Stack
+- Framework: Angular 18+ (Standalone Components, Signals, Computed Signals, Reactive Forms, Native @if / @for)
+- Styling: Tailwind CSS & Font Awesome icons
+- Database & Auth: Supabase (`@supabase/supabase-js`)
+- Deployment Target: Vercel
+
+### 2. Building Structure & Floor Plan Business Rules
+- 4 Vertically Connected Blocks: North Block (Top), 2nd Block, 3rd Block, South Block (Bottom).
+- Standard Floors (1st, 2nd, 3rd): 16 apartments each. Right column goes Southbound (X01 to X08), Left column goes Northbound (X09 to X16).
+- Ground Floor: 15 apartments (001-008 on right, 009-015 on left). Slot 016 is designated as "Main Building Gate".
+- Roof: 4 apartments total (411 & 412 in 3rd Block Left, 413 & 414 in 2nd Block Left).
+
+### 3. Database Schema (Supabase)
+- Table `apartments`: `apt_number` (PK, string), `floor` (string), `block` (string), `resident_name` (string), `resident_phone` (string), `owner_name` (string), `is_rented` (boolean), `has_paid` (boolean), `updated_at` (timestamp).
+- Table `transactions`: `id` (uuid), `type` ('income' | 'expense'), `amount` (number), `title` (string), `apt_number` (string nullable), `receipt_url` (string nullable), `created_at` (timestamp).
+
+---
+
+### REQUIRED FILES TO GENERATE:
+
+#### File 1: `src/app/services/supabase.service.ts`
+- Initialize Supabase client using environment variables (`environment.supabaseUrl`, `environment.supabaseKey`).
+- Implement Auth methods: `login(email, password)`, `logout()`, `getUser()`, `getSession()`.
+- Implement Apartments CRUD: `getApartments()`, `updateApartment(aptNumber, data)`, `togglePaymentStatus(aptNumber, hasPaid)`.
+- Implement Finance CRUD: `getTransactions()`, `addTransaction(transactionData)`, `uploadReceipt(file)`.
+
+#### File 2: `src/app/guards/auth.guard.ts`
+- Functional `CanActivateFn` checking if a Supabase session exists. If not logged in, redirect to `/admin/login`.
+
+#### File 3: `src/app/pages/admin-login/login.component.ts`
+- Email & password form using Reactive Forms.
+- Dark theme UI with Tailwind. Handle errors (invalid credentials) and redirect to `/admin/residents` upon success.
+
+#### File 4: `src/app/pages/admin-dashboard/manage-residents.component.ts`
+- Admin interface to manage residents and 2,000 LE payment statuses.
+- Includes a searchable data table of all 67 apartments with quick toggles for `has_paid` and `is_rented`.
+- Modal to edit resident details (Resident Name, Phone, Owner Name, Is Rented, Paid Status).
+- Live stats using Signals: Total Apartments, Total Paid, Total Unpaid.
+
+#### File 5: `src/app/pages/admin-dashboard/manage-finance.component.ts`
+- Building Box Cash Management page.
+- Stats Bar using Computed Signals:
+  - Total Maintenance Collected (Sum of paid 2,000 LE fees or income transactions)
+  - Total Building Expenses (Sum of expense transactions)
+  - **Remaining Money in Building Box** (`Total Income - Total Expenses`)
+- Expense/Income Logger Form: Title, Amount, Type (Income/Expense), Associated Apartment (optional), Receipt Image upload to Supabase Storage.
+- Transactions History Table with preview links for uploaded receipts.
+
+#### File 6: `src/app/pages/resident-view/resident.component.ts`
+- Public read-only page for building residents.
+- Displays the interactive 4-Block Floor Plan with Floor Selector tabs (Ground, 1st, 2nd, 3rd, Roof).
+- Green cards for Paid, Red for Unpaid. Gate slot rendered on Ground floor.
+- Header showing Building Box balance and payment progress without needing login.
+- "Manager Login" button linking to `/admin/login`.
+
+#### File 7: `src/app/app.routes.ts`
+- Route configuration:
+  - `''` -> `ResidentComponent`
+  - `'admin/login'` -> `LoginComponent`
+  - `'admin'` (protected by `authGuard`) -> Children: `'residents'` (`ManageResidentsComponent`), `'finance'` (`ManageFinanceComponent`), default redirect to `'residents'`.
+
+Please write clean, production-ready, TypeScript code for all these files with full Tailwind styling.
