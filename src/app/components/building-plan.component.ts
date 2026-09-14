@@ -1,21 +1,23 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { Apartment, BLOCKS_TOP_TO_BOTTOM, BlockName, FloorName, MAINTENANCE_FEE, apartmentSide } from '../models/building';
 import { Transaction } from '../services/finance.service';
+import { TranslationService } from '../services/translation.service';
 
 interface BlockMeta {
-    title: string;
+    titleKey: string;
     icon: string;
-    stairwell: string | null;
-    stairwellEnd: string | null;
+    stairwellKey: string | null;
+    stairwellEndKey: string | null;
+    titlePosition: 'top' | 'bottom';
     borderClass: string;
     titleClass: string;
 }
 
 const BLOCK_META: Record<BlockName, BlockMeta> = {
-    North: { title: 'Block 1 — Back Entrance', icon: '🚪', stairwell: 'Stairwell 1', stairwellEnd: null, borderClass: 'border-2 border-amber-500', titleClass: 'text-amber-400' },
-    Second: { title: 'Block 2 — Back Section', icon: '', stairwell: null, stairwellEnd: null, borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    Third: { title: 'Block 3 — Back Section', icon: '', stairwell: null, stairwellEnd: 'Stairwell 2', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
-    South: { title: 'Block 4 — Front Entrance', icon: '🏢', stairwell: 'Stairwell 2', stairwellEnd: null, borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
+    North: { titleKey: 'block1Title', icon: '🚪', stairwellKey: 'stairwell1', stairwellEndKey: null, titlePosition: 'top', borderClass: 'border-2 border-amber-500', titleClass: 'text-amber-400' },
+    Second: { titleKey: 'block2Title', icon: '', stairwellKey: null, stairwellEndKey: null, titlePosition: 'top', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
+    Third: { titleKey: 'block3Title', icon: '', stairwellKey: null, stairwellEndKey: 'stairwell2', titlePosition: 'top', borderClass: 'border-2 border-dashed border-amber-500/70', titleClass: 'text-amber-400' },
+    South: { titleKey: 'block4Title', icon: '🏢', stairwellKey: 'stairwell2', stairwellEndKey: null, titlePosition: 'bottom', borderClass: 'border-2 border-blue-500', titleClass: 'text-blue-400' },
 };
 
 type Connector = 'hallway' | 'courtyard' | null;
@@ -24,16 +26,18 @@ type Connector = 'hallway' | 'courtyard' | null;
     selector: 'app-building-plan',
     standalone: true,
     template: `
-    <div class="space-y-0">
+    <div class="space-y-0" dir="ltr">
       @for (row of rows(); track row.block) {
           <div class="rounded-xl p-2.5 sm:p-3 bg-slate-800" [class]="meta(row.block).borderClass">
-            <p class="text-center text-xs font-bold mb-1.5" [class]="meta(row.block).titleClass">
-              {{ meta(row.block).icon }} {{ meta(row.block).title }}
-            </p>
+            @if (meta(row.block).titlePosition === 'top') {
+              <p class="text-center text-xs font-bold mb-1.5" [class]="meta(row.block).titleClass">
+                {{ meta(row.block).icon }} {{ t.t(meta(row.block).titleKey) }}
+              </p>
+            }
 
-            @if (meta(row.block).stairwell) {
+            @if (meta(row.block).stairwellKey) {
               <div class="mx-auto w-fit px-2.5 py-0.5 rounded-full bg-slate-700 text-[9px] font-mono tracking-widest text-amber-300 mb-2">
-                ▒ {{ meta(row.block).stairwell }} ▒
+                ▒ {{ t.t(meta(row.block).stairwellKey!) }} ▒
               </div>
             }
 
@@ -88,10 +92,16 @@ type Connector = 'hallway' | 'courtyard' | null;
               </div>
             </div>
 
-            @if (meta(row.block).stairwellEnd) {
+            @if (meta(row.block).stairwellEndKey) {
               <div class="mx-auto w-fit px-2.5 py-0.5 rounded-full bg-slate-700 text-[9px] font-mono tracking-widest text-amber-300 mt-2">
-                ▒ {{ meta(row.block).stairwellEnd }} ▒
+                ▒ {{ t.t(meta(row.block).stairwellEndKey!) }} ▒
               </div>
+            }
+
+            @if (meta(row.block).titlePosition === 'bottom') {
+              <p class="text-center text-xs font-bold mt-2" [class]="meta(row.block).titleClass">
+                {{ meta(row.block).icon }} {{ t.t(meta(row.block).titleKey) }}
+              </p>
             }
           </div>
 
@@ -99,14 +109,14 @@ type Connector = 'hallway' | 'courtyard' | null;
             <div class="flex flex-col items-center py-1">
               <div class="w-1 h-3 bg-slate-600"></div>
               <div class="px-4 py-1 rounded-full bg-slate-900 border border-slate-600 text-[10px] text-slate-400 font-bold tracking-wide whitespace-nowrap">
-                ═ HALLWAY ═
+                ═ {{ t.t('hallway') }} ═
               </div>
               <div class="w-1 h-3 bg-slate-600"></div>
             </div>
           } @else if (row.connectorAfter === 'courtyard') {
             <div class="flex items-center gap-2 py-3">
               <div class="flex-1 border-t-2 border-dashed border-slate-600"></div>
-              <span class="text-[10px] text-slate-500 font-bold tracking-wide whitespace-nowrap">↔ DISCONNECTED COURTYARD ↔</span>
+              <span class="text-[10px] text-slate-500 font-bold tracking-wide whitespace-nowrap">↔ {{ t.t('disconnectedCourtyard') }} ↔</span>
               <div class="flex-1 border-t-2 border-dashed border-slate-600"></div>
             </div>
           }
@@ -119,7 +129,7 @@ type Connector = 'hallway' | 'courtyard' | null;
           <button type="button" (click)="closeModal()" aria-label="Close"
             class="absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center">✕</button>
           <p class="font-bold text-white mb-1 pr-8">Apartment {{ apt.apt_number }}</p>
-          <p class="text-slate-400 text-xs mb-2">{{ apt.floor }} · {{ meta(apt.block).title }}</p>
+          <p class="text-slate-400 text-xs mb-2">{{ apt.floor }} · {{ t.t(meta(apt.block).titleKey) }}</p>
           <p class="mb-1">
             Status:
             <span [class.text-emerald-400]="apt.has_paid" [class.text-red-400]="!apt.has_paid">
@@ -168,6 +178,7 @@ type Connector = 'hallway' | 'courtyard' | null;
 })
 export class BuildingPlanComponent {
     readonly fee = MAINTENANCE_FEE;
+    readonly t = inject(TranslationService);
 
     apartments = input.required<Apartment[]>();
     floor = input.required<FloorName>();
@@ -214,9 +225,10 @@ export class BuildingPlanComponent {
     }
 
     leftApts(block: BlockName) {
+        // Descending: within a block the higher number sits on top (e.g. 110 above 109, 116 above 115).
         return this.floorApts()
             .filter(a => a.block === block && apartmentSide(a) === 'left')
-            .sort((a, b) => a.apt_number.localeCompare(b.apt_number));
+            .sort((a, b) => b.apt_number.localeCompare(a.apt_number));
     }
 
     rightApts(block: BlockName) {
