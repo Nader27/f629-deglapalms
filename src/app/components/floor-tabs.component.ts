@@ -1,18 +1,19 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { FloorName } from '../models/building';
+import { TranslationService } from '../services/translation.service';
 
-const FLOOR_ABBR: Record<FloorName, string> = {
-    Ground: 'G',
-    '1st': 'F1',
-    '2nd': 'F2',
-    '3rd': 'F3',
-    Roof: 'RF',
+const FLOOR_ABBR_KEY: Record<FloorName, string> = {
+  Ground: 'floorGroundShort',
+  '1st': 'floor1stShort',
+  '2nd': 'floor2ndShort',
+  '3rd': 'floor3rdShort',
+  Roof: 'floorRoofShort',
 };
 
 @Component({
-    selector: 'app-floor-tabs',
-    standalone: true,
-    template: `
+  selector: 'app-floor-tabs',
+  standalone: true,
+  template: `
     <div class="flex flex-col gap-2 max-h-[70vh] overflow-y-auto pr-1 shrink-0">
       @for (floor of floors(); track floor) {
         <button type="button" (click)="floorChange.emit(floor)"
@@ -36,11 +37,13 @@ const FLOOR_ABBR: Record<FloorName, string> = {
   `,
 })
 export class FloorTabsComponent {
-    floors = input.required<FloorName[]>();
-    selected = input.required<FloorName>();
-    floorChange = output<FloorName>();
+  readonly t = inject(TranslationService);
 
-    abbr(floor: FloorName): string {
-        return FLOOR_ABBR[floor];
-    }
+  floors = input.required<FloorName[]>();
+  selected = input.required<FloorName>();
+  floorChange = output<FloorName>();
+
+  abbr(floor: FloorName): string {
+    return this.t.t(FLOOR_ABBR_KEY[floor]);
+  }
 }

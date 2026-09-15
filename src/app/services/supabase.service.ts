@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { Apartment } from '../models/building';
+import { Apartment, ResidentInfoApproval } from '../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../models/settings';
 
 export interface Transaction {
@@ -61,6 +61,41 @@ export class SupabaseService {
 
     togglePaymentStatus(aptNumber: string, hasPaid: boolean) {
         return this.updateApartment(aptNumber, { has_paid: hasPaid });
+    }
+
+    // --- Resident information approvals ---
+    async getInfoApprovals(): Promise<ResidentInfoApproval[]> {
+        const { data, error } = await this.client
+            .from('resident_info_approvals')
+            .select('*')
+            .order('created_at', { ascending: true });
+        if (error) throw error;
+        return data ?? [];
+    }
+
+    async submitInfoApproval(approval: ResidentInfoApproval): Promise<ResidentInfoApproval> {
+        const { error } = await this.client
+            .from('resident_info_approvals')
+            .upsert(approval, { onConflict: 'apt_number' });
+        if (error) throw error;
+        return approval;
+    }
+
+    async approveInfoRequest(approval: ResidentInfoApproval): Promise<Apartment> {
+        const updated = await this.updateApartment(approval.apt_number, {
+            resident_name: approval.resident_name ?? '',
+            resident_phone: approval.resident_phone ?? '',
+            owner_name: approval.owner_name ?? '',
+            owner_phone: approval.owner_phone ?? '',
+            is_rented: approval.is_rented,
+        });
+        await this.deleteInfoApproval(approval.id!);
+        return updated;
+    }
+
+    async deleteInfoApproval(id: string) {
+        const { error } = await this.client.from('resident_info_approvals').delete().eq('id', id);
+        if (error) throw error;
     }
 
     // --- Finance ---

@@ -33,6 +33,32 @@ CREATE POLICY "Public Read Transactions" ON transactions FOR SELECT USING (true)
 
 -- Allow ONLY LOGGED-IN ADMINS to INSERT, UPDATE, DELETE
 CREATE POLICY "Admin Full Access Apartments" ON apartments FOR ALL USING (auth.role() = 'authenticated');
+
+-- 1b. Resident-submitted information waits here until an admin reviews it.
+CREATE TABLE resident_info_approvals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  apt_number VARCHAR(10) NOT NULL UNIQUE REFERENCES apartments(apt_number) ON DELETE CASCADE,
+  resident_name VARCHAR(100) DEFAULT '',
+  resident_phone VARCHAR(20) DEFAULT '',
+  owner_name VARCHAR(100) DEFAULT '',
+  owner_phone VARCHAR(20) DEFAULT '',
+  is_rented BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE resident_info_approvals ENABLE ROW LEVEL SECURITY;
+
+-- Residents can submit or replace a pending request, but cannot read apartment requests.
+CREATE POLICY "Public Submit Resident Info Approval" ON resident_info_approvals
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public Replace Resident Info Approval" ON resident_info_approvals
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+-- Only authenticated admins can review and remove requests.
+CREATE POLICY "Admin Read Resident Info Approvals" ON resident_info_approvals
+  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin Delete Resident Info Approvals" ON resident_info_approvals
+  FOR DELETE USING (auth.role() = 'authenticated');
 CREATE POLICY "Admin Full Access Transactions" ON transactions FOR ALL USING (auth.role() = 'authenticated');
 
 -- 4. App Settings (single row: payment link + WhatsApp group link, admin-configurable)

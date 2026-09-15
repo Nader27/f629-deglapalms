@@ -1,25 +1,27 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
 import { FinanceService } from '../../services/finance.service';
 import { TranslationService } from '../../services/translation.service';
 import { BuildingPlanComponent } from '../../components/building-plan.component';
 import { FloorTabsComponent } from '../../components/floor-tabs.component';
 import {
-    Apartment,
-    FLOORS,
-    FloorName,
-    MAINTENANCE_FEE,
-    generateBuildingLayout,
+  Apartment,
+  FLOORS,
+  FloorName,
+  MAINTENANCE_FEE,
+  ResidentInfoApproval,
+  generateBuildingLayout,
 } from '../../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
 
 @Component({
-    selector: 'app-resident-view',
-    standalone: true,
-    imports: [RouterLink, DatePipe, BuildingPlanComponent, FloorTabsComponent],
-    template: `
+  selector: 'app-resident-view',
+  standalone: true,
+  imports: [RouterLink, DatePipe, FormsModule, BuildingPlanComponent, FloorTabsComponent],
+  template: `
     <div class="min-h-screen bg-slate-900 text-white p-6" [attr.dir]="t.dir()">
       <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
@@ -66,7 +68,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [paymentUrl]="settings().payment_url" [showPersonalInfo]="false" [editable]="false" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [paymentUrl]="settings().payment_url" [showPersonalInfo]="true" [editable]="true" (edit)="openInfoRequest($event)" />
           </div>
         </div>
       }
@@ -87,7 +89,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                   <thead class="text-slate-400 uppercase text-xs">
                     <tr>
                       <th class="text-start px-3 py-2">{{ t.t('date') }}</th>
-                      <th class="text-start px-3 py-2">{{ t.t('title') }}</th>
+                      <!-- <th class="text-start px-3 py-2">{{ t.t('title') }}</th> -->
                       <th class="text-start px-3 py-2">{{ t.t('apartment') }}</th>
                       <th class="text-start px-3 py-2">{{ t.t('type') }}</th>
                       <th class="text-start px-3 py-2">{{ t.t('amount') }}</th>
@@ -98,7 +100,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                     @for (tr of finance.transactions(); track tr.id) {
                       <tr class="border-t border-slate-700">
                         <td class="px-3 py-2 text-slate-400">{{ tr.created_at | date: 'short' }}</td>
-                        <td class="px-3 py-2">{{ tr.title }}</td>
+                        <!-- <td class="px-3 py-2">{{ tr.title }}</td> -->
                         <td class="px-3 py-2">{{ tr.apt_number || '—' }}</td>
                         <td class="px-3 py-2">
                           <span [class.text-emerald-400]="tr.type === 'income'" [class.text-red-400]="tr.type === 'expense'">
@@ -125,52 +127,135 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         </div>
       }
     </div>
+
+    @if (editing(); as apt) {
+      <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" [attr.dir]="t.dir()" (click)="closeEdit()">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 w-full max-w-md" (click)="$event.stopPropagation()">
+          <h2 class="text-lg font-bold text-slate-400 mb-4">{{ t.t('editApartment') }} {{ apt.apt_number }}</h2>
+          <div class="space-y-3">
+            <label class="flex items-center text-slate-400 gap-2 text-sm">
+              <input type="checkbox" [(ngModel)]="infoForm.is_rented" />
+              {{ t.t('rented') }}
+            </label>
+            @if (infoForm.is_rented) {
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">{{ t.t('resident') }}</label>
+                <input [(ngModel)]="infoForm.resident_name" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">{{ t.t('resident') }} {{ t.t('phone') }}</label>
+                <input [(ngModel)]="infoForm.resident_phone" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
+              </div>
+            }
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">{{ t.t('owner') }}</label>
+              <input [(ngModel)]="infoForm.owner_name" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">{{ t.t('owner') }} {{ t.t('phone') }}</label>
+              <input [(ngModel)]="infoForm.owner_phone" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
+            </div>
+          </div>
+          @if (requestMessage()) {
+            <p class="text-emerald-400 text-sm mt-3">{{ requestMessage() }}</p>
+          }
+          @if (requestError()) {
+            <p class="text-red-400 text-sm mt-3">{{ requestError() }}</p>
+          }
+          <div class="flex justify-end gap-3 mt-6">
+            <button type="button" (click)="closeEdit()" class="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm">{{ t.t('close') }}</button>
+            <button type="button" (click)="submitInfoRequest()" [disabled]="requestSaving()"
+              class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm disabled:opacity-50">
+              {{ requestSaving() ? t.t('saving') : t.t('submitForReview') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class ResidentComponent implements OnInit {
-    readonly fee = MAINTENANCE_FEE;
-    readonly floors = FLOORS;
+  readonly fee = MAINTENANCE_FEE;
+  readonly floors = FLOORS;
 
-    loading = signal(true);
-    selectedFloor = signal<FloorName>('Ground');
-    apartments = signal<Apartment[]>([]);
-    settings = signal<AppSettings>(DEFAULT_SETTINGS);
-    showTransactions = signal(false);
+  loading = signal(true);
+  selectedFloor = signal<FloorName>('Ground');
+  apartments = signal<Apartment[]>([]);
+  settings = signal<AppSettings>(DEFAULT_SETTINGS);
+  showTransactions = signal(false);
+  editing = signal<Apartment | null>(null);
+  infoForm: ResidentInfoApproval = { apt_number: '', is_rented: false };
+  requestSaving = signal(false);
+  requestMessage = signal('');
+  requestError = signal('');
 
-    progress = computed(() => {
-        const list = this.apartments();
-        const paid = list.filter(a => a.has_paid).length;
-        const total = list.length;
-        return { paid, total, percent: total ? Math.round((paid / total) * 100) : 0 };
-    });
+  progress = computed(() => {
+    const list = this.apartments();
+    const paid = list.filter(a => a.has_paid).length;
+    const total = list.length;
+    return { paid, total, percent: total ? Math.round((paid / total) * 100) : 0 };
+  });
 
-    constructor(private supabase: SupabaseService, public finance: FinanceService, public t: TranslationService) { }
+  constructor(private supabase: SupabaseService, public finance: FinanceService, public t: TranslationService) { }
 
-    async ngOnInit() {
-        await Promise.all([this.load(), this.finance.loadTransactions(), this.loadSettings()]);
+  async ngOnInit() {
+    await Promise.all([this.load(), this.finance.loadTransactions(), this.loadSettings()]);
+  }
+
+  async loadSettings() {
+    try {
+      this.settings.set(await this.supabase.getSettings());
+    } catch {
+      this.settings.set(DEFAULT_SETTINGS);
     }
+  }
 
-    async loadSettings() {
-        try {
-            this.settings.set(await this.supabase.getSettings());
-        } catch {
-            this.settings.set(DEFAULT_SETTINGS);
-        }
-    }
+  openInfoRequest(apt: Apartment) {
+    this.editing.set(apt);
+    this.infoForm = {
+      apt_number: apt.apt_number,
+      is_rented: apt.is_rented,
+      resident_name: apt.resident_name ?? '',
+      resident_phone: apt.resident_phone ?? '',
+      owner_name: apt.owner_name ?? '',
+      owner_phone: apt.owner_phone ?? '',
+    };
+    this.requestMessage.set('');
+    this.requestError.set('');
+  }
 
-    async load() {
-        this.loading.set(true);
-        const layout = generateBuildingLayout();
-        let saved: Apartment[] = [];
-        try {
-            saved = await this.supabase.getApartments();
-        } catch {
-            saved = [];
-        }
-        const savedByNumber = new Map(saved.map(a => [a.apt_number, a]));
-        const merged = layout.map(slot => savedByNumber.get(slot.apt_number) ?? slot);
-        this.apartments.set(merged);
-        this.loading.set(false);
+  closeEdit() {
+    this.editing.set(null);
+  }
+
+  async submitInfoRequest() {
+    if (!this.editing()) return;
+    this.requestSaving.set(true);
+    this.requestMessage.set('');
+    this.requestError.set('');
+    try {
+      await this.supabase.submitInfoApproval(this.infoForm);
+      this.requestMessage.set(this.t.t('requestSubmitted'));
+    } catch {
+      this.requestError.set(this.t.t('requestFailed'));
+    } finally {
+      this.requestSaving.set(false);
     }
+  }
+
+  async load() {
+    this.loading.set(true);
+    const layout = generateBuildingLayout();
+    let saved: Apartment[] = [];
+    try {
+      saved = await this.supabase.getApartments();
+    } catch {
+      saved = [];
+    }
+    const savedByNumber = new Map(saved.map(a => [a.apt_number, a]));
+    const merged = layout.map(slot => savedByNumber.get(slot.apt_number) ?? slot);
+    this.apartments.set(merged);
+    this.loading.set(false);
+  }
 }
 

@@ -19,6 +19,17 @@ export interface Apartment {
     updated_at?: string;
 }
 
+export interface ResidentInfoApproval {
+    id?: string;
+    apt_number: string;
+    resident_name?: string | null;
+    resident_phone?: string | null;
+    owner_name?: string | null;
+    owner_phone?: string | null;
+    is_rented: boolean;
+    created_at?: string;
+}
+
 function pad(n: number): string {
     return n.toString().padStart(3, '0');
 }
