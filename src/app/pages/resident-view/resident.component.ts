@@ -143,7 +143,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                 <input [(ngModel)]="infoForm.resident_name" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">{{ t.t('resident') }} {{ t.t('phone') }}</label>
+                <label class="block text-xs text-slate-400 mb-1">{{ t.t('resident_phone') }}</label>
                 <input [(ngModel)]="infoForm.resident_phone" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
               </div>
             }
@@ -152,7 +152,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
               <input [(ngModel)]="infoForm.owner_name" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">{{ t.t('owner') }} {{ t.t('phone') }}</label>
+              <label class="block text-xs text-slate-400 mb-1">{{ t.t('owner_phone') }}</label>
               <input [(ngModel)]="infoForm.owner_phone" class="w-full rounded-lg bg-slate-900 border border-slate-600 text-white px-3 py-2" />
             </div>
           </div>

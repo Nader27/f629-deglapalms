@@ -166,12 +166,12 @@ type Connector = 'hallway' | 'courtyard' | null;
             <hr class="my-2 border-slate-700" />
             @if (apt.is_rented) {
               <p>{{ t.t('resident') }}: {{ apt.resident_name || '—' }}</p>
-              <p>{{ t.t('phone') }}: {{ apt.resident_phone || '—' }}</p>
+              <p>{{ t.t('resident_phone') }}: {{ apt.resident_phone || '—' }}</p>
               <p>{{ t.t('owner') }}: {{ apt.owner_name || '—' }}</p>
-              <p>{{ t.t('phone') }}: {{ apt.owner_phone || '—' }}</p>
+              <p>{{ t.t('owner_phone') }}: {{ apt.owner_phone || '—' }}</p>
             } @else {
               <p>{{ t.t('owner') }}: {{ apt.owner_name || '—' }}</p>
-              <p>{{ t.t('phone') }}: {{ apt.owner_phone || '—' }}</p>
+              <p>{{ t.t('owner_phone') }}: {{ apt.owner_phone || '—' }}</p>
             }
           }
           @if (editable()) {
