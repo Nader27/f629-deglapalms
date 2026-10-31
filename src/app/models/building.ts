@@ -30,6 +30,13 @@ export interface ResidentInfoApproval {
     created_at?: string;
 }
 
+export interface GateCard {
+    id?: string;
+    card_id: string;
+    apt_number: string;
+    created_at?: string;
+}
+
 function pad(n: number): string {
     return n.toString().padStart(3, '0');
 }

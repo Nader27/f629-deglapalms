@@ -23,6 +23,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <nav class="flex gap-3">
           <a routerLink="/admin/finance" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm hover:bg-slate-700">Finance →</a>
           <a routerLink="/" class="px-4 py-2 rounded-lg bg-white border border-slate-300 text-sm hover:bg-slate-50">View Public Page</a>
+          <a routerLink="/admin/gate-cards" class="px-4 py-2 rounded-lg bg-indigo-700 text-white text-sm hover:bg-indigo-600">Gate Cards →</a>
         </nav>
       </header>
 

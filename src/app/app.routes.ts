@@ -27,6 +27,10 @@ export const routes: Routes = [
         path: 'finance',
         loadComponent: () => import('./pages/admin-dashboard/manage-finance.component').then(m => m.ManageFinanceComponent)
       },
+      {
+        path: 'gate-cards',
+        loadComponent: () => import('./pages/admin-dashboard/manage-gate-cards.component').then(m => m.ManageGateCardsComponent)
+      },
       { path: '', redirectTo: 'residents', pathMatch: 'full' }
     ]
   },

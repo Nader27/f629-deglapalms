@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { Apartment, ResidentInfoApproval } from '../models/building';
+import { Apartment, GateCard, ResidentInfoApproval } from '../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../models/settings';
 
 export interface Transaction {
@@ -147,5 +147,32 @@ export class SupabaseService {
             .select();
         if (error) throw error;
         return data![0];
+    }
+
+    // --- Gate cards ---
+    async getGateCards(): Promise<GateCard[]> {
+        const { data, error } = await this.client
+            .from('gate_cards')
+            .select('*')
+            .order('apt_number', { ascending: true })
+            .order('card_id', { ascending: true });
+        if (error) throw error;
+        return (data ?? []) as GateCard[];
+    }
+
+    async addGateCard(aptNumber: string, cardId: string): Promise<GateCard> {
+        const normalizedCardId = cardId.trim();
+        const { data, error } = await this.client
+            .from('gate_cards')
+            .insert({ apt_number: aptNumber.trim(), card_id: normalizedCardId })
+            .select()
+            .single();
+        if (error) throw error;
+        return data as GateCard;
+    }
+
+    async deleteGateCard(id: string): Promise<void> {
+        const { error } = await this.client.from('gate_cards').delete().eq('id', id);
+        if (error) throw error;
     }
 }
