@@ -127,7 +127,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [maintenanceFee]="fee" [showGateCardNumbers]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [maintenanceFee]="fee" [showGateCardNumbers]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" (addTransaction)="openTransaction($event)" />
           </div>
         </div>
       </div>
@@ -179,7 +179,6 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                   </td>
                   <td class="px-4 py-2">
                     <button (click)="openEdit(apt)" class="text-indigo-600 hover:underline text-xs">Edit</button>
-                    <button (click)="openTransaction(apt)" class="text-emerald-600 hover:underline text-xs ml-3">Add transaction</button>
                   </td>
                 </tr>
               }

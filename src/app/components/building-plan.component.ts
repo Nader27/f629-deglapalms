@@ -195,8 +195,12 @@ type Connector = 'hallway' | 'courtyard' | null;
             }
           }
           @if (editable()) {
+            <button type="button" (click)="requestTransaction(apt)"
+              class="w-full mt-3 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+              Add transaction
+            </button>
             <button type="button" (click)="requestEdit(apt)"
-              class="w-full mt-3 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+              class="w-full mt-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
               {{ t.t('editApartment') }}
             </button>
           }
@@ -218,6 +222,7 @@ export class BuildingPlanComponent {
   showGateCardNumbers = input(false);
   paymentUrl = input<string | null>(null);
   edit = output<Apartment>();
+  addTransaction = output<Apartment>();
 
   hovered = signal<Apartment | null>(null);
   selected = signal<Apartment | null>(null);
@@ -307,6 +312,11 @@ export class BuildingPlanComponent {
 
   requestEdit(apt: Apartment) {
     this.edit.emit(apt);
+    this.closeModal();
+  }
+
+  requestTransaction(apt: Apartment) {
+    this.addTransaction.emit(apt);
     this.closeModal();
   }
 }
