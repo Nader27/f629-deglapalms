@@ -194,13 +194,15 @@ type Connector = 'hallway' | 'courtyard' | null;
               <p>{{ t.t('owner_phone') }}: @if (apt.owner_phone) { <a [href]="'tel:' + apt.owner_phone" class="text-sky-300 hover:underline">{{ apt.owner_phone }}</a> } @else { — }</p>
             }
           }
-          @if (editable()) {
+          @if (editable() && showAddTransaction()) {
             <button type="button" (click)="requestTransaction(apt)"
               class="w-full mt-3 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
               Add transaction
             </button>
+          }
+          @if (editable()) {
             <button type="button" (click)="requestEdit(apt)"
-              class="w-full mt-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+              class="w-full mt-3 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
               {{ t.t('editApartment') }}
             </button>
           }
@@ -220,6 +222,7 @@ export class BuildingPlanComponent {
   gateCards = input<GateCard[]>([]);
   maintenanceFee = input<number>(MAINTENANCE_FEE);
   showGateCardNumbers = input(false);
+  showAddTransaction = input(false);
   paymentUrl = input<string | null>(null);
   edit = output<Apartment>();
   addTransaction = output<Apartment>();

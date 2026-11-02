@@ -127,7 +127,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [maintenanceFee]="fee" [showGateCardNumbers]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" (addTransaction)="openTransaction($event)" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [maintenanceFee]="fee" [showGateCardNumbers]="true" [showAddTransaction]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" (addTransaction)="openTransaction($event)" />
           </div>
         </div>
       </div>
