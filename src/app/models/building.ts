@@ -37,6 +37,12 @@ export interface GateCard {
     created_at?: string;
 }
 
+export function normalizeGateCardId(cardId: string): string | null {
+    const trimmed = cardId.trim();
+    if (!/^\d+$/.test(trimmed) || trimmed.length > 10) return null;
+    return trimmed.padStart(10, '0');
+}
+
 function pad(n: number): string {
     return n.toString().padStart(3, '0');
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { Apartment, GateCard, ResidentInfoApproval } from '../models/building';
+import { Apartment, GateCard, ResidentInfoApproval, normalizeGateCardId } from '../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../models/settings';
 
 export interface Transaction {
@@ -162,16 +162,22 @@ export class SupabaseService {
 
     async upsertGateCards(cards: Pick<GateCard, 'card_id' | 'apt_number'>[]): Promise<GateCard[]> {
         if (!cards.length) return [];
+        const normalizedCards = cards.map(card => {
+            const cardId = normalizeGateCardId(card.card_id);
+            if (!cardId) throw new Error(`RFID card number must contain 1 to 10 digits: ${card.card_id}`);
+            return { ...card, card_id: cardId };
+        });
         const { data, error } = await this.client
             .from('gate_cards')
-            .upsert(cards, { onConflict: 'card_id' })
+            .upsert(normalizedCards, { onConflict: 'card_id' })
             .select('id, card_id, apt_number, created_at');
         if (error) throw error;
         return (data ?? []) as GateCard[];
     }
 
     async addGateCard(aptNumber: string, cardId: string): Promise<GateCard> {
-        const normalizedCardId = cardId.trim();
+        const normalizedCardId = normalizeGateCardId(cardId);
+        if (!normalizedCardId) throw new Error('RFID card number must contain 1 to 10 digits.');
         const { data, error } = await this.client
             .from('gate_cards')
             .insert({ apt_number: aptNumber.trim(), card_id: normalizedCardId })

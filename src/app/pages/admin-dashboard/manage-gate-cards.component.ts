@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { GateCard } from '../../models/building';
+import { GateCard, normalizeGateCardId } from '../../models/building';
 import { SupabaseService } from '../../services/supabase.service';
 
 export interface GateCardCsvImport {
@@ -67,11 +67,12 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
 
   rows.forEach((row, index) => {
     const rowNumber = index + (hasHeader ? 2 : 1);
-    const cardId = row[0]?.trim() ?? '';
+    const rawCardId = row[0]?.trim() ?? '';
     const aptNumber = row[1]?.trim() ?? '';
+    const cardId = normalizeGateCardId(rawCardId);
 
-    if (!cardId || !/^\d+$/.test(cardId)) {
-      errors.push(`Row ${rowNumber}: card number must contain digits only.`);
+    if (!cardId) {
+      errors.push(`Row ${rowNumber}: card number must contain 1 to 10 digits.`);
       return;
     }
 
@@ -133,7 +134,7 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
         </div>
         <div class="mt-5 border-t border-slate-200 pt-4">
           <h3 class="font-semibold text-slate-800 mb-2">Import cards from CSV</h3>
-          <p class="text-xs text-slate-500 mb-3">Use card number and apartment number columns. Apartment can be empty to leave a card unassigned.</p>
+          <p class="text-xs text-slate-500 mb-3">Use card number and apartment number columns. Card numbers are stored as 10 digits; missing leading zeros are added automatically. Apartment can be empty to leave a card unassigned.</p>
           <div class="flex flex-wrap items-center gap-3">
             <label for="gate-card-csv" class="cursor-pointer rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">
               Choose CSV
@@ -240,24 +241,25 @@ export class ManageGateCardsComponent implements OnInit {
     const cardId = this.form.card_id.trim();
     this.message.set('');
 
-    if (!aptNumber || !/^\d+$/.test(cardId)) {
+    const normalizedCardId = normalizeGateCardId(cardId);
+    if (!aptNumber || !normalizedCardId) {
       this.messageType.set('error');
-      this.message.set('Select an apartment and enter a numeric Card ID. Leading zeros will be preserved.');
+      this.message.set('Select an apartment and enter an RFID card number containing up to 10 digits. Missing leading zeros will be added automatically.');
       return;
     }
 
     this.saving.set(true);
     try {
-      await this.supabase.addGateCard(aptNumber, cardId);
+      await this.supabase.addGateCard(aptNumber, normalizedCardId);
       this.form.card_id = '';
       this.messageType.set('success');
-      this.message.set(`Card ${cardId} assigned to apartment ${aptNumber}.`);
+      this.message.set(`Card ${normalizedCardId} assigned to apartment ${aptNumber}.`);
       await this.loadCards();
     } catch (error) {
       this.messageType.set('error');
       const databaseError = error as { code?: string; message?: string };
       this.message.set(databaseError.code === '23505'
-        ? `Card ID ${cardId} is already assigned.`
+        ? `Card ID ${normalizedCardId} is already assigned.`
         : (databaseError.message || 'Could not assign the card.'));
     } finally {
       this.saving.set(false);

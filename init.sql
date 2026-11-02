@@ -1,6 +1,6 @@
 -- 1. Apartments / Residents Table
 CREATE TABLE apartments (
-  apt_number VARCHAR(10) PRIMARY KEY, -- e.g. '101', 'G15', '414'
+  apt_number VARCHAR(10) PRIMARY KEY, -- e.g. '101', '305', '414'
   floor VARCHAR(20) NOT NULL,
   block VARCHAR(20) NOT NULL,
   resident_name VARCHAR(100) DEFAULT '',
@@ -11,6 +11,8 @@ CREATE TABLE apartments (
   has_paid BOOLEAN DEFAULT FALSE,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE apartments ADD CONSTRAINT apartments_apt_number_three_digits CHECK (apt_number ~ '^[0-9]{3}$');
 
 -- 2. Financial Transactions & Receipts (Money in Building Box)
 CREATE TABLE transactions (
@@ -82,7 +84,7 @@ CREATE TABLE gate_cards (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-ALTER TABLE gate_cards ADD CONSTRAINT gate_cards_numeric_id CHECK (card_id ~ '^[0-9]+$');
+ALTER TABLE gate_cards ADD CONSTRAINT gate_cards_numeric_id CHECK (card_id ~ '^[0-9]{10}$');
 CREATE UNIQUE INDEX gate_cards_card_id_unique ON gate_cards(card_id);
 
 ALTER TABLE gate_cards ENABLE ROW LEVEL SECURITY;
