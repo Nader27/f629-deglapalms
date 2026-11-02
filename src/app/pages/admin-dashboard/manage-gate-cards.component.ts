@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { RfidFobPreviewComponent } from '../../components/rfid-fob-preview.component';
 import { GateCard, normalizeApartmentNumber, normalizeGateCardId } from '../../models/building';
 import { SupabaseService } from '../../services/supabase.service';
 
@@ -93,7 +94,7 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
 @Component({
   selector: 'app-manage-gate-cards',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, RfidFobPreviewComponent],
   template: `
     <div class="min-h-screen bg-slate-100 p-6">
       <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -109,32 +110,37 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
       </header>
 
       <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-6">
-        <h2 class="font-semibold text-slate-800 mb-4">Assign a Card</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
           <div>
             <label class="block text-xs text-slate-500 mb-1">Apartment</label>
-            <select [(ngModel)]="form.apt_number" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
-              <option value="">Select apartment</option>
+            <select [ngModel]="selectedApartmentFilter()" (ngModelChange)="setApartmentFilter($event)" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+              <option value="">All apartments</option>
+              <option value="__unassigned__">Unassigned</option>
               @for (apt of apartments(); track apt.apt_number) {
                 <option [value]="apt.apt_number">Apartment {{ apt.apt_number }}</option>
               }
             </select>
           </div>
           <div>
-            <label class="block text-xs text-slate-500 mb-1">Numeric RFID Card ID</label>
-            <input
-              type="text"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              [(ngModel)]="form.card_id"
-              placeholder="0002379787"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono" />
+            <label class="block text-xs text-slate-500 mb-1">Card number</label>
+            <select [ngModel]="selectedCardFilter()" (ngModelChange)="selectedCardFilter.set($event)" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+              <option value="">All card numbers</option>
+              @for (card of cardFilterOptions(); track card.id) {
+                <option [value]="card.card_id">{{ card.card_id }}</option>
+              }
+            </select>
           </div>
-          <button (click)="assignCard()" [disabled]="saving()"
-            class="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 disabled:opacity-50">
-            {{ saving() ? 'Assigning…' : 'Assign Card' }}
-          </button>
         </div>
+        <div class="flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <h2 class="font-semibold text-slate-800">Card preview</h2>
+            <p class="text-xs text-slate-500 mt-1">Select a card above or enter a card number when adding one.</p>
+          </div>
+          <app-rfid-fob-preview [cardId]="previewCardId()" />
+        </div>
+        <button (click)="openAddCardModal()" class="mt-5 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">
+          Add RFID Card
+        </button>
         <div class="mt-5 border-t border-slate-200 pt-4">
           <h3 class="font-semibold text-slate-800 mb-2">Import cards from CSV</h3>
           <p class="text-xs text-slate-500 mb-3">Use card number and apartment number columns. Card numbers are stored as 10 digits; missing leading zeros are added automatically. Apartment can be empty to leave a card unassigned.</p>
@@ -157,9 +163,10 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
         }
       </section>
 
-      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-4 border-b border-slate-200">
-          <input type="text" [(ngModel)]="searchTerm" placeholder="Search by card ID or apartment…"
+      <details class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <summary class="cursor-pointer px-4 py-3 font-semibold text-slate-800">View card table</summary>
+        <div class="p-4 border-t border-slate-200">
+          <input type="text" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" placeholder="Search by card ID or apartment…"
             class="w-full rounded-lg border border-slate-300 px-3 py-2" />
         </div>
         @if (loading()) {
@@ -195,7 +202,40 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
             </table>
           </div>
         }
-      </section>
+      </details>
+
+      @if (showAddCardModal()) {
+        <div class="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="add-card-title">
+          <section class="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+            <div class="flex items-center justify-between gap-4 mb-4">
+              <h2 id="add-card-title" class="font-semibold text-slate-800">Add RFID Card</h2>
+              <button (click)="closeAddCardModal()" class="text-slate-500 hover:text-slate-800" aria-label="Close">×</button>
+            </div>
+            <div class="grid gap-3">
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Apartment</label>
+                <select [(ngModel)]="form.apt_number" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+                  <option value="">Select apartment</option>
+                  @for (apt of apartments(); track apt.apt_number) {
+                    <option [value]="apt.apt_number">Apartment {{ apt.apt_number }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Numeric RFID Card ID</label>
+                <input type="text" inputmode="numeric" pattern="[0-9]*" [ngModel]="manualCardId()" (ngModelChange)="setManualCardId($event)" placeholder="0002379787"
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono" />
+              </div>
+            </div>
+            <div class="mt-5 flex justify-end gap-2">
+              <button (click)="closeAddCardModal()" class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">Cancel</button>
+              <button (click)="assignCard()" [disabled]="saving()" class="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 disabled:opacity-50">
+                {{ saving() ? 'Assigning…' : 'Assign Card' }}
+              </button>
+            </div>
+          </section>
+        </div>
+      }
     </div>
   `,
 })
@@ -206,15 +246,32 @@ export class ManageGateCardsComponent implements OnInit {
   saving = signal(false);
   removingId = signal<string | null>(null);
   importing = signal(false);
-  searchTerm = '';
+  searchTerm = signal('');
+  selectedApartmentFilter = signal('');
+  selectedCardFilter = signal('');
+  manualCardId = signal('');
+  showAddCardModal = signal(false);
   message = signal('');
   messageType = signal<'success' | 'error'>('success');
   selectedCsvFile: File | null = null;
   form = { apt_number: '', card_id: '' };
 
+  cardFilterOptions = computed(() => {
+    const apartment = this.selectedApartmentFilter();
+    return this.cards()
+      .filter(card => !apartment || (apartment === '__unassigned__' ? !card.apt_number : card.apt_number === apartment))
+      .sort((a, b) => a.card_id.localeCompare(b.card_id));
+  });
+
+  previewCardId = computed(() => this.selectedCardFilter() || this.manualCardId());
+
   filteredCards = computed(() => {
-    const term = this.searchTerm.trim().toLowerCase();
+    const term = this.searchTerm().trim().toLowerCase();
+    const apartment = this.selectedApartmentFilter();
+    const cardId = this.selectedCardFilter();
     return [...this.cards()]
+      .filter(card => !apartment || (apartment === '__unassigned__' ? !card.apt_number : card.apt_number === apartment))
+      .filter(card => !cardId || card.card_id === cardId)
       .filter(card => !term || card.card_id.includes(term) || (card.apt_number ?? '').toLowerCase().includes(term))
       .sort((a, b) => (a.apt_number ?? '').localeCompare(b.apt_number ?? '') || a.card_id.localeCompare(b.card_id));
   });
@@ -239,9 +296,27 @@ export class ManageGateCardsComponent implements OnInit {
     }
   }
 
+  setApartmentFilter(apartment: string) {
+    this.selectedApartmentFilter.set(apartment);
+    this.selectedCardFilter.set('');
+  }
+
+  setManualCardId(cardId: string) {
+    this.manualCardId.set(cardId);
+    this.form.card_id = cardId;
+  }
+
+  openAddCardModal() {
+    this.showAddCardModal.set(true);
+  }
+
+  closeAddCardModal() {
+    this.showAddCardModal.set(false);
+  }
+
   async assignCard() {
     const aptNumber = this.form.apt_number.trim();
-    const cardId = this.form.card_id.trim();
+    const cardId = this.manualCardId().trim();
     this.message.set('');
 
     const normalizedCardId = normalizeGateCardId(cardId);
@@ -255,6 +330,8 @@ export class ManageGateCardsComponent implements OnInit {
     try {
       await this.supabase.addGateCard(aptNumber, normalizedCardId);
       this.form.card_id = '';
+      this.manualCardId.set('');
+      this.closeAddCardModal();
       this.messageType.set('success');
       this.message.set(`Card ${normalizedCardId} assigned to apartment ${aptNumber}.`);
       await this.loadCards();
