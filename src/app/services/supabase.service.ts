@@ -63,6 +63,20 @@ export class SupabaseService {
         return this.updateApartment(aptNumber, { has_paid: hasPaid });
     }
 
+    async syncApartmentPaymentStatus(aptNumber: string, maintenanceFee: number): Promise<Apartment> {
+        const { data, error } = await this.client
+            .from('transactions')
+            .select('amount')
+            .eq('apt_number', aptNumber)
+            .eq('type', 'income');
+        if (error) throw error;
+        const incomeTotal = (data ?? []).reduce(
+            (sum: number, transaction: { amount: number | string }) => sum + Number(transaction.amount),
+            0,
+        );
+        return this.updateApartment(aptNumber, { has_paid: incomeTotal >= maintenanceFee });
+    }
+
     // --- Resident information approvals ---
     async getInfoApprovals(): Promise<ResidentInfoApproval[]> {
         const { data, error } = await this.client
@@ -137,7 +151,7 @@ export class SupabaseService {
     async getSettings(): Promise<AppSettings> {
         const { data, error } = await this.client.from('app_settings').select('*').eq('id', true).maybeSingle();
         if (error || !data) return DEFAULT_SETTINGS;
-        return data;
+        return { ...DEFAULT_SETTINGS, ...data, maintenance_fee: Number(data.maintenance_fee ?? DEFAULT_SETTINGS.maintenance_fee) };
     }
 
     async updateSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
@@ -146,7 +160,7 @@ export class SupabaseService {
             .upsert({ id: true, ...patch }, { onConflict: 'id' })
             .select();
         if (error) throw error;
-        return data![0];
+        return { ...DEFAULT_SETTINGS, ...data![0], maintenance_fee: Number(data![0].maintenance_fee ?? DEFAULT_SETTINGS.maintenance_fee) };
     }
 
     // --- Gate cards ---

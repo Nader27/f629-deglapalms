@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FinanceService, Transaction } from '../../services/finance.service';
 import { SupabaseService } from '../../services/supabase.service';
+import { DEFAULT_SETTINGS } from '../../models/settings';
 
 @Component({
   selector: 'app-manage-finance',
@@ -201,6 +202,8 @@ export class ManageFinanceComponent implements OnInit {
   constructor(public finance: FinanceService, private supabase: SupabaseService) { }
 
   async ngOnInit() {
+    const settings = await this.supabase.getSettings().catch(() => DEFAULT_SETTINGS);
+    this.finance.setMaintenanceFee(settings.maintenance_fee);
     await this.finance.loadTransactions();
   }
 

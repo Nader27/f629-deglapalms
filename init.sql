@@ -67,14 +67,15 @@ CREATE POLICY "Admin Full Access Transactions" ON transactions FOR ALL USING (au
 CREATE TABLE app_settings (
   id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id), -- forces exactly one row
   payment_url TEXT,
-  whatsapp_url TEXT
+  whatsapp_url TEXT,
+  maintenance_fee DECIMAL(10, 2) NOT NULL DEFAULT 2000
 );
 
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public Read Settings" ON app_settings FOR SELECT USING (true);
 CREATE POLICY "Admin Full Access Settings" ON app_settings FOR ALL USING (auth.role() = 'authenticated');
 
-INSERT INTO app_settings (id, payment_url, whatsapp_url) VALUES (true, NULL, NULL);
+INSERT INTO app_settings (id, payment_url, whatsapp_url, maintenance_fee) VALUES (true, NULL, NULL, 2000);
 
 -- 5. Gate cards (RFID card assignments; NULL apartment means unassigned)
 CREATE TABLE gate_cards (

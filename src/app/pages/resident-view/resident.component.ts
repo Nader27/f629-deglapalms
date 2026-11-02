@@ -27,7 +27,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
       <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
           <h1 class="text-2xl font-bold">{{ t.t('appTitle') }}</h1>
-          <p class="text-slate-400 text-sm">{{ t.t('maintenanceFee', { fee }) }}</p>
+          <p class="text-slate-400 text-sm">{{ t.t('maintenanceFee', { fee: settings().maintenance_fee }) }}</p>
         </div>
         <div class="flex gap-2">
           <button (click)="t.toggle()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">
@@ -69,7 +69,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [paymentUrl]="settings().payment_url" [showPersonalInfo]="true" [editable]="true" (edit)="openInfoRequest($event)" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [maintenanceFee]="settings().maintenance_fee" [paymentUrl]="settings().payment_url" [showPersonalInfo]="true" [editable]="true" (edit)="openInfoRequest($event)" />
           </div>
         </div>
       }

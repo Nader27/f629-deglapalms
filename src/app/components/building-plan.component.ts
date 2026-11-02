@@ -150,14 +150,14 @@ type Connector = 'hallway' | 'courtyard' | null;
           <p class="mb-1">
             {{ t.t('status') }}:
             <span [class.text-emerald-400]="apt.has_paid" [class.text-red-400]="!apt.has_paid">
-              {{ apt.has_paid ? '✓ ' + t.t('paid') + ' ' + fee + ' LE' : t.t('unpaid') }}
+              {{ apt.has_paid ? '✓ ' + t.t('paid') + ' ' + maintenanceFee() + ' LE' : t.t('unpaid') }}
             </span>
           </p>
           <p class="mb-1">{{ hasInfo(apt) ? (apt.is_rented ? t.t('rented') : t.t('ownerOccupied')) : t.t('noInfoOnFile') }}</p>
           @if (!apt.has_paid && paymentUrl()) {
             <a [href]="paymentUrl()" target="_blank" rel="noopener"
               class="block text-center mt-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
-              💳 {{ t.t('payMaintenance') }} ({{ fee }} LE)
+              💳 {{ t.t('payMaintenance') }} ({{ maintenanceFee() }} LE)
             </a>
           }
           @if (aptPayments(apt).length) {
@@ -206,7 +206,6 @@ type Connector = 'hallway' | 'courtyard' | null;
   `,
 })
 export class BuildingPlanComponent {
-  readonly fee = MAINTENANCE_FEE;
   readonly t = inject(TranslationService);
 
   apartments = input.required<Apartment[]>();
@@ -215,6 +214,7 @@ export class BuildingPlanComponent {
   editable = input(false);
   transactions = input<Transaction[]>([]);
   gateCards = input<GateCard[]>([]);
+  maintenanceFee = input<number>(MAINTENANCE_FEE);
   showGateCardNumbers = input(false);
   paymentUrl = input<string | null>(null);
   edit = output<Apartment>();

@@ -39,7 +39,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
 
       <div class="mb-6 p-4 rounded-lg bg-white border border-slate-200">
         <p class="text-sm font-semibold text-slate-800 mb-3">Links shown to residents</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs text-slate-500 mb-1">Payment URL (shown as "Pay Maintenance" on unpaid apartments)</label>
             <input [(ngModel)]="settingsForm.payment_url" placeholder="https://..."
@@ -50,10 +50,15 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
             <input [(ngModel)]="settingsForm.whatsapp_url" placeholder="https://chat.whatsapp.com/..."
               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Maintenance Fee (LE)</label>
+            <input type="number" min="0" step="0.01" [(ngModel)]="settingsForm.maintenance_fee"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          </div>
         </div>
         <button (click)="saveSettings()" [disabled]="savingSettings()"
           class="mt-3 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-500 disabled:opacity-50">
-          {{ savingSettings() ? 'Saving…' : 'Save Links' }}
+          {{ savingSettings() ? 'Saving…' : 'Save Settings' }}
         </button>
       </div>
 
@@ -122,7 +127,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [showGateCardNumbers]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [maintenanceFee]="fee" [showGateCardNumbers]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
           </div>
         </div>
       </div>
@@ -174,6 +179,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                   </td>
                   <td class="px-4 py-2">
                     <button (click)="openEdit(apt)" class="text-indigo-600 hover:underline text-xs">Edit</button>
+                    <button (click)="openTransaction(apt)" class="text-emerald-600 hover:underline text-xs ml-3">Add transaction</button>
                   </td>
                 </tr>
               }
@@ -252,11 +258,57 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         </div>
       </div>
     }
+
+    @if (transactionTarget(); as apt) {
+      <div class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" (click)="closeTransaction()">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" (click)="$event.stopPropagation()">
+          <h2 class="text-lg font-bold text-slate-800 mb-4">Add transaction · Apartment {{ apt.apt_number }}</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Title</label>
+              <input [(ngModel)]="transactionForm.title" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Amount (LE)</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="transactionForm.amount" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Type</label>
+                <select [(ngModel)]="transactionForm.type" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Receipt image (optional)</label>
+              <label for="resident-transaction-image" class="inline-flex cursor-pointer rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Choose image</label>
+              <span class="ml-3 text-sm text-slate-500">{{ transactionFile?.name || 'No image selected' }}</span>
+              <input id="resident-transaction-image" type="file" accept="image/*" (change)="onTransactionFileSelected($event)" class="sr-only" />
+            </div>
+          </div>
+          @if (transactionError()) {
+            <p class="text-red-600 text-sm mt-3">{{ transactionError() }}</p>
+          }
+          <div class="flex justify-end gap-3 mt-6">
+            <button type="button" (click)="closeTransaction()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Cancel</button>
+            <button type="button" (click)="saveTransaction(apt)" [disabled]="transactionSaving()"
+              class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm disabled:opacity-50">
+              {{ transactionSaving() ? 'Saving…' : 'Add Transaction' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class ManageResidentsComponent implements OnInit {
-  readonly fee = MAINTENANCE_FEE;
   readonly floors = FLOORS;
+
+  get fee(): number {
+    return Number(this.settingsForm.maintenance_fee || MAINTENANCE_FEE);
+  }
 
   apartments = signal<Apartment[]>([]);
   gateCards = signal<GateCard[]>([]);
@@ -275,6 +327,15 @@ export class ManageResidentsComponent implements OnInit {
   paymentSaving = signal(false);
   paymentError = signal('');
   paymentFile: File | null = null;
+  transactionTarget = signal<Apartment | null>(null);
+  transactionSaving = signal(false);
+  transactionError = signal('');
+  transactionFile: File | null = null;
+  transactionForm: { title: string; amount: number | null; type: 'income' | 'expense' } = {
+    title: '',
+    amount: null,
+    type: 'income',
+  };
 
   needsSeed = computed(() => !this.loading() && this.apartments().length === 0);
 
@@ -303,20 +364,29 @@ export class ManageResidentsComponent implements OnInit {
 
   async ngOnInit() {
     await Promise.all([this.load(), this.loadGateCards(), this.loadApprovals(), this.finance.loadTransactions(), this.loadSettings()]);
+    await this.syncPaymentStatuses();
   }
 
   async loadSettings() {
     try {
       this.settingsForm = await this.supabase.getSettings();
+      this.finance.setMaintenanceFee(this.fee);
     } catch {
       this.settingsForm = { ...DEFAULT_SETTINGS };
+      this.finance.setMaintenanceFee(this.fee);
     }
   }
 
   async saveSettings() {
     this.savingSettings.set(true);
-    this.settingsForm = await this.supabase.updateSettings(this.settingsForm);
-    this.savingSettings.set(false);
+    try {
+      this.settingsForm.maintenance_fee = Math.max(0, Number(this.settingsForm.maintenance_fee) || 0);
+      this.settingsForm = await this.supabase.updateSettings(this.settingsForm);
+      this.finance.setMaintenanceFee(this.fee);
+      await this.syncPaymentStatuses();
+    } finally {
+      this.savingSettings.set(false);
+    }
   }
 
   async load() {
@@ -395,6 +465,76 @@ export class ManageResidentsComponent implements OnInit {
     } finally {
       this.paymentSaving.set(false);
     }
+  }
+
+  openTransaction(apt: Apartment) {
+    this.transactionTarget.set(apt);
+    this.transactionForm = {
+      title: `Maintenance - Apt ${apt.apt_number}`,
+      amount: this.fee,
+      type: 'income',
+    };
+    this.transactionFile = null;
+    this.transactionError.set('');
+  }
+
+  closeTransaction() {
+    if (!this.transactionSaving()) {
+      this.transactionTarget.set(null);
+      this.transactionFile = null;
+      this.transactionError.set('');
+    }
+  }
+
+  onTransactionFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.transactionFile = input.files?.[0] ?? null;
+  }
+
+  async saveTransaction(apt: Apartment) {
+    const amount = Number(this.transactionForm.amount);
+    if (!this.transactionForm.title.trim() || !Number.isFinite(amount) || amount <= 0) {
+      this.transactionError.set('Enter a title and a positive amount.');
+      return;
+    }
+
+    this.transactionSaving.set(true);
+    this.transactionError.set('');
+    try {
+      const receiptUrl = this.transactionFile ? await this.supabase.uploadReceipt(this.transactionFile) : null;
+      await this.finance.addTransaction({
+        title: this.transactionForm.title.trim(),
+        amount,
+        type: this.transactionForm.type,
+        apt_number: apt.apt_number,
+        receipt_url: receiptUrl,
+      });
+      await this.syncPaymentStatuses();
+      this.transactionTarget.set(null);
+      this.transactionFile = null;
+    } catch (error) {
+      this.transactionError.set((error as { message?: string }).message || 'Could not save the transaction.');
+    } finally {
+      this.transactionSaving.set(false);
+    }
+  }
+
+  private async syncPaymentStatuses() {
+    const incomeByApartment = new Map<string, number>();
+    for (const transaction of this.finance.transactions()) {
+      if (transaction.type !== 'income' || !transaction.apt_number) continue;
+      incomeByApartment.set(transaction.apt_number, (incomeByApartment.get(transaction.apt_number) ?? 0) + Number(transaction.amount));
+    }
+
+    const updates = this.apartments()
+      .filter(apt => apt.has_paid !== ((incomeByApartment.get(apt.apt_number) ?? 0) >= this.fee))
+      .map(async apt => {
+        const updated = await this.supabase.updateApartment(apt.apt_number, {
+          has_paid: (incomeByApartment.get(apt.apt_number) ?? 0) >= this.fee,
+        });
+        this.patchLocal(updated);
+      });
+    await Promise.all(updates);
   }
 
   async toggleRented(apt: Apartment) {
