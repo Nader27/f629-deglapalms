@@ -33,7 +33,7 @@ export interface ResidentInfoApproval {
 export interface GateCard {
     id?: string;
     card_id: string;
-    apt_number: string;
+    apt_number: string | null;
     created_at?: string;
 }
 

@@ -11,6 +11,7 @@ import {
   Apartment,
   FLOORS,
   FloorName,
+  GateCard,
   MAINTENANCE_FEE,
   ResidentInfoApproval,
   generateBuildingLayout,
@@ -68,7 +69,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [paymentUrl]="settings().payment_url" [showPersonalInfo]="true" [editable]="true" (edit)="openInfoRequest($event)" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [paymentUrl]="settings().payment_url" [showPersonalInfo]="true" [editable]="true" (edit)="openInfoRequest($event)" />
           </div>
         </div>
       }
@@ -181,6 +182,7 @@ export class ResidentComponent implements OnInit {
   loading = signal(true);
   selectedFloor = signal<FloorName>('Ground');
   apartments = signal<Apartment[]>([]);
+  gateCards = signal<GateCard[]>([]);
   settings = signal<AppSettings>(DEFAULT_SETTINGS);
   showTransactions = signal(false);
   editing = signal<Apartment | null>(null);
@@ -199,7 +201,7 @@ export class ResidentComponent implements OnInit {
   constructor(private supabase: SupabaseService, public finance: FinanceService, public t: TranslationService) { }
 
   async ngOnInit() {
-    await Promise.all([this.load(), this.finance.loadTransactions(), this.loadSettings()]);
+    await Promise.all([this.load(), this.loadGateCards(), this.finance.loadTransactions(), this.loadSettings()]);
   }
 
   async loadSettings() {
@@ -207,6 +209,14 @@ export class ResidentComponent implements OnInit {
       this.settings.set(await this.supabase.getSettings());
     } catch {
       this.settings.set(DEFAULT_SETTINGS);
+    }
+  }
+
+  async loadGateCards() {
+    try {
+      this.gateCards.set(await this.supabase.getGateCards());
+    } catch {
+      this.gateCards.set([]);
     }
   }
 

@@ -153,9 +153,19 @@ export class SupabaseService {
     async getGateCards(): Promise<GateCard[]> {
         const { data, error } = await this.client
             .from('gate_cards')
-            .select('*')
+            .select('id, card_id, apt_number, created_at')
             .order('apt_number', { ascending: true })
             .order('card_id', { ascending: true });
+        if (error) throw error;
+        return (data ?? []) as GateCard[];
+    }
+
+    async upsertGateCards(cards: Pick<GateCard, 'card_id' | 'apt_number'>[]): Promise<GateCard[]> {
+        if (!cards.length) return [];
+        const { data, error } = await this.client
+            .from('gate_cards')
+            .upsert(cards, { onConflict: 'card_id' })
+            .select('id, card_id, apt_number, created_at');
         if (error) throw error;
         return (data ?? []) as GateCard[];
     }

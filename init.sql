@@ -74,7 +74,23 @@ CREATE POLICY "Admin Full Access Settings" ON app_settings FOR ALL USING (auth.r
 
 INSERT INTO app_settings (id, payment_url, whatsapp_url) VALUES (true, NULL, NULL);
 
--- 5. Storage bucket for uploaded receipt/screenshot images (used by supabase.service.ts uploadReceipt())
+-- 5. Gate cards (RFID card assignments; NULL apartment means unassigned)
+CREATE TABLE gate_cards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  card_id VARCHAR(50) UNIQUE NOT NULL,
+  apt_number VARCHAR(10) REFERENCES apartments(apt_number) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE gate_cards ADD CONSTRAINT gate_cards_numeric_id CHECK (card_id ~ '^[0-9]+$');
+CREATE UNIQUE INDEX gate_cards_card_id_unique ON gate_cards(card_id);
+
+ALTER TABLE gate_cards ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public Read Gate Cards" ON gate_cards FOR SELECT USING (true);
+CREATE POLICY "Admin Full Access Gate Cards" ON gate_cards FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
+-- 6. Storage bucket for uploaded receipt/screenshot images (used by supabase.service.ts uploadReceipt())
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('receipts', 'receipts', true)
 ON CONFLICT (id) DO NOTHING;

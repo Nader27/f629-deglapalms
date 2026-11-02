@@ -30,9 +30,10 @@ export class FinanceService {
     this.transactions.set(data);
   }
 
-  async addTransaction(transaction: Transaction) {
+  async addTransaction(transaction: Transaction): Promise<Transaction> {
     const created = await this.supabase.addTransaction(transaction);
     this.transactions.update(prev => [created, ...prev]);
+    return created;
   }
 
   async updateTransaction(id: string, patch: Partial<Transaction>) {

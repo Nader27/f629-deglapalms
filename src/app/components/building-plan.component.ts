@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { Apartment, BLOCKS_TOP_TO_BOTTOM, BlockName, FloorName, MAINTENANCE_FEE, apartmentSide } from '../models/building';
+import { Apartment, BLOCKS_TOP_TO_BOTTOM, BlockName, FloorName, GateCard, MAINTENANCE_FEE, apartmentSide } from '../models/building';
 import { Transaction } from '../services/finance.service';
 import { TranslationService } from '../services/translation.service';
 
@@ -64,6 +64,11 @@ type Connector = 'hallway' | 'courtyard' | null;
                       [class.cursor-pointer]="editable()"
                       [class.cursor-default]="!editable()">
                       {{ apt.apt_number }}
+                      @if (aptGateCards(apt).length) {
+                        <span class="absolute -bottom-1 -right-1 min-w-4 h-4 rounded-full bg-amber-400 text-slate-900 text-[9px] leading-none flex items-center justify-center px-1 shadow" [attr.title]="aptGateCards(apt).length + ' assigned key(s)'">
+                          {{ aptGateCards(apt).length }}
+                        </span>
+                      }
                       @if (apt.has_paid) {
                         <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] leading-none flex items-center justify-center shadow">✓</span>
                       }
@@ -88,6 +93,11 @@ type Connector = 'hallway' | 'courtyard' | null;
                       [class.cursor-pointer]="editable()"
                       [class.cursor-default]="!editable()">
                       {{ apt.apt_number }}
+                      @if (aptGateCards(apt).length) {
+                        <span class="absolute -bottom-1 -right-1 min-w-4 h-4 rounded-full bg-amber-400 text-slate-900 text-[9px] leading-none flex items-center justify-center px-1 shadow" [attr.title]="aptGateCards(apt).length + ' assigned key(s)'">
+                          {{ aptGateCards(apt).length }}
+                        </span>
+                      }
                       @if (apt.has_paid) {
                         <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] leading-none flex items-center justify-center shadow">✓</span>
                       }
@@ -162,16 +172,26 @@ type Connector = 'hallway' | 'courtyard' | null;
               }
             </details>
           }
+          @if (showGateCardNumbers() && aptGateCards(apt).length) {
+            <details class="mt-3 rounded-lg bg-slate-900/60 border border-slate-700 p-3">
+              <summary class="cursor-pointer text-xs text-slate-300 uppercase">Assigned keys</summary>
+              <div class="mt-2 space-y-1">
+                @for (card of aptGateCards(apt); track card.id || card.card_id) {
+                  <p class="font-mono text-amber-300 text-xs">{{ card.card_id }}</p>
+                }
+              </div>
+            </details>
+          }
           @if (showPersonalInfo()) {
             <hr class="my-2 border-slate-700" />
             @if (apt.is_rented) {
               <p>{{ t.t('resident') }}: {{ apt.resident_name || '—' }}</p>
-              <p>{{ t.t('resident_phone') }}: {{ apt.resident_phone || '—' }}</p>
+              <p>{{ t.t('resident_phone') }}: @if (apt.resident_phone) { <a [href]="'tel:' + apt.resident_phone" class="text-sky-300 hover:underline">{{ apt.resident_phone }}</a> } @else { — }</p>
               <p>{{ t.t('owner') }}: {{ apt.owner_name || '—' }}</p>
-              <p>{{ t.t('owner_phone') }}: {{ apt.owner_phone || '—' }}</p>
+              <p>{{ t.t('owner_phone') }}: @if (apt.owner_phone) { <a [href]="'tel:' + apt.owner_phone" class="text-sky-300 hover:underline">{{ apt.owner_phone }}</a> } @else { — }</p>
             } @else {
               <p>{{ t.t('owner') }}: {{ apt.owner_name || '—' }}</p>
-              <p>{{ t.t('owner_phone') }}: {{ apt.owner_phone || '—' }}</p>
+              <p>{{ t.t('owner_phone') }}: @if (apt.owner_phone) { <a [href]="'tel:' + apt.owner_phone" class="text-sky-300 hover:underline">{{ apt.owner_phone }}</a> } @else { — }</p>
             }
           }
           @if (editable()) {
@@ -194,6 +214,8 @@ export class BuildingPlanComponent {
   showPersonalInfo = input(false);
   editable = input(false);
   transactions = input<Transaction[]>([]);
+  gateCards = input<GateCard[]>([]);
+  showGateCardNumbers = input(false);
   paymentUrl = input<string | null>(null);
   edit = output<Apartment>();
 
@@ -230,6 +252,10 @@ export class BuildingPlanComponent {
 
   aptPaymentsTotal(apt: Apartment): number {
     return this.aptPayments(apt).reduce((sum, t) => sum + Number(t.amount), 0);
+  }
+
+  aptGateCards(apt: Apartment): GateCard[] {
+    return this.gateCards().filter(card => card.apt_number === apt.apt_number);
   }
 
   tileClasses(apt: Apartment): string {

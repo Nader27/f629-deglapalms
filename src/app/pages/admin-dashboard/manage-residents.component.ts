@@ -6,7 +6,7 @@ import { SupabaseService } from '../../services/supabase.service';
 import { FinanceService } from '../../services/finance.service';
 import { BuildingPlanComponent } from '../../components/building-plan.component';
 import { FloorTabsComponent } from '../../components/floor-tabs.component';
-import { Apartment, FLOORS, FloorName, MAINTENANCE_FEE, ResidentInfoApproval, generateBuildingLayout } from '../../models/building';
+import { Apartment, FLOORS, FloorName, GateCard, MAINTENANCE_FEE, ResidentInfoApproval, generateBuildingLayout } from '../../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
 
 @Component({
@@ -101,8 +101,8 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                   <tr class="border-t border-slate-100">
                     <td class="px-3 py-2 font-semibold">{{ request.apt_number }}</td>
                     <td class="px-3 py-2">{{ request.is_rented ? 'Yes' : 'No' }}</td>
-                    <td class="px-3 py-2">{{ request.resident_name || '—' }}<br /><span class="text-slate-400">{{ request.resident_phone || '—' }}</span></td>
-                    <td class="px-3 py-2">{{ request.owner_name || '—' }}<br /><span class="text-slate-400">{{ request.owner_phone || '—' }}</span></td>
+                    <td class="px-3 py-2">{{ request.resident_name || '—' }}<br />@if (request.resident_phone) { <a [href]="'tel:' + request.resident_phone" class="text-slate-400 hover:underline">{{ request.resident_phone }}</a> } @else { <span class="text-slate-400">—</span> }</td>
+                    <td class="px-3 py-2">{{ request.owner_name || '—' }}<br />@if (request.owner_phone) { <a [href]="'tel:' + request.owner_phone" class="text-slate-400 hover:underline">{{ request.owner_phone }}</a> } @else { <span class="text-slate-400">—</span> }</td>
                     <td class="px-3 py-2 text-slate-500">{{ request.created_at | date: 'short' }}</td>
                     <td class="px-3 py-2 whitespace-nowrap">
                       <button type="button" (click)="approveRequest(request)" [disabled]="approvalAction() === request.id"
@@ -122,7 +122,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         <div class="flex gap-3 items-start">
           <app-floor-tabs [floors]="floors" [selected]="selectedFloor()" (floorChange)="selectedFloor.set($event)" />
           <div class="flex-1 min-w-0">
-            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
+            <app-building-plan [apartments]="apartments()" [floor]="selectedFloor()" [transactions]="finance.transactions()" [gateCards]="gateCards()" [showGateCardNumbers]="true" [showPersonalInfo]="true" [editable]="true" (edit)="openEdit($event)" />
           </div>
         </div>
       </div>
@@ -151,9 +151,9 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                   <td class="px-4 py-2 text-slate-500">{{ apt.floor }} · {{ apt.block }}</td>
                   <td class="px-4 py-2">
                     @if (apt.is_rented) {
-                      {{ apt.resident_name || '—' }} <span class="text-slate-400">{{ apt.resident_phone }}</span>
+                      {{ apt.resident_name || '—' }} @if (apt.resident_phone) { <a [href]="'tel:' + apt.resident_phone" class="text-slate-400 hover:underline">{{ apt.resident_phone }}</a> }
                     } @else {
-                      {{ apt.owner_name || '—' }} <span class="text-slate-400">{{ apt.owner_phone }}</span>
+                      {{ apt.owner_name || '—' }} @if (apt.owner_phone) { <a [href]="'tel:' + apt.owner_phone" class="text-slate-400 hover:underline">{{ apt.owner_phone }}</a> }
                     }
                   </td>
                   <td class="px-4 py-2">
@@ -165,7 +165,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
                     </button>
                   </td>
                   <td class="px-4 py-2">
-                    <button (click)="togglePaid(apt)"
+                    <button (click)="openPayment(apt)"
                       class="px-2 py-1 rounded text-xs font-medium"
                       [class.bg-emerald-100]="apt.has_paid" [class.text-emerald-700]="apt.has_paid"
                       [class.bg-red-100]="!apt.has_paid" [class.text-red-600]="!apt.has_paid">
@@ -221,6 +221,37 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../models/settings';
         </div>
       </div>
     }
+
+    @if (paymentTarget(); as apt) {
+      <div class="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" (click)="closePayment()">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" (click)="$event.stopPropagation()">
+          <h2 class="text-lg font-bold text-slate-800 mb-2">Payment status · Apartment {{ apt.apt_number }}</h2>
+          <p class="text-sm text-slate-500 mb-4">An approval image is optional. Canceling the file picker leaves the image empty.</p>
+          <label for="payment-approval-image" class="inline-flex cursor-pointer rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">
+            Choose approval image
+          </label>
+          <span class="ml-3 text-sm text-slate-500">{{ paymentFile?.name || 'No image selected' }}</span>
+          <input id="payment-approval-image" type="file" accept="image/*" (change)="onPaymentFileSelected($event)" class="sr-only" />
+          @if (paymentError()) {
+            <p class="text-red-600 text-sm mt-3">{{ paymentError() }}</p>
+          }
+          <div class="flex justify-end gap-3 mt-6">
+            <button type="button" (click)="closePayment()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Cancel</button>
+            @if (apt.has_paid) {
+              <button type="button" (click)="markUnpaid(apt)" [disabled]="paymentSaving()"
+                class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm disabled:opacity-50">
+                {{ paymentSaving() ? 'Saving…' : 'Mark Unpaid' }}
+              </button>
+            } @else {
+              <button type="button" (click)="markPaid(apt)" [disabled]="paymentSaving()"
+                class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm disabled:opacity-50">
+                {{ paymentSaving() ? 'Saving…' : 'Mark Paid' }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
   `,
 })
 export class ManageResidentsComponent implements OnInit {
@@ -228,6 +259,7 @@ export class ManageResidentsComponent implements OnInit {
   readonly floors = FLOORS;
 
   apartments = signal<Apartment[]>([]);
+  gateCards = signal<GateCard[]>([]);
   searchTerm = signal('');
   selectedFloor = signal<FloorName>('Ground');
   editing = signal<Apartment | null>(null);
@@ -239,6 +271,10 @@ export class ManageResidentsComponent implements OnInit {
   savingSettings = signal(false);
   approvals = signal<ResidentInfoApproval[]>([]);
   approvalAction = signal<string | null>(null);
+  paymentTarget = signal<Apartment | null>(null);
+  paymentSaving = signal(false);
+  paymentError = signal('');
+  paymentFile: File | null = null;
 
   needsSeed = computed(() => !this.loading() && this.apartments().length === 0);
 
@@ -266,7 +302,7 @@ export class ManageResidentsComponent implements OnInit {
   constructor(private supabase: SupabaseService, public finance: FinanceService) { }
 
   async ngOnInit() {
-    await Promise.all([this.load(), this.loadApprovals(), this.finance.loadTransactions(), this.loadSettings()]);
+    await Promise.all([this.load(), this.loadGateCards(), this.loadApprovals(), this.finance.loadTransactions(), this.loadSettings()]);
   }
 
   async loadSettings() {
@@ -294,6 +330,14 @@ export class ManageResidentsComponent implements OnInit {
     this.approvals.set(await this.supabase.getInfoApprovals());
   }
 
+  async loadGateCards() {
+    try {
+      this.gateCards.set(await this.supabase.getGateCards());
+    } catch {
+      this.gateCards.set([]);
+    }
+  }
+
   async seedBuilding() {
     this.seeding.set(true);
     const layout = generateBuildingLayout();
@@ -302,11 +346,55 @@ export class ManageResidentsComponent implements OnInit {
     this.seeding.set(false);
   }
 
-  async togglePaid(apt: Apartment) {
-    const wasPaid = apt.has_paid;
-    const updated = await this.supabase.updateApartment(apt.apt_number, { has_paid: !apt.has_paid });
-    this.patchLocal(updated);
-    if (!wasPaid && updated.has_paid) await this.recordMaintenancePayment(updated);
+  openPayment(apt: Apartment) {
+    this.paymentTarget.set(apt);
+    this.paymentFile = null;
+    this.paymentError.set('');
+  }
+
+  closePayment() {
+    if (!this.paymentSaving()) {
+      this.paymentTarget.set(null);
+      this.paymentFile = null;
+      this.paymentError.set('');
+    }
+  }
+
+  onPaymentFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.paymentFile = input.files?.[0] ?? null;
+  }
+
+  async markPaid(apt: Apartment) {
+    this.paymentSaving.set(true);
+    this.paymentError.set('');
+    try {
+      const receiptUrl = this.paymentFile ? await this.supabase.uploadReceipt(this.paymentFile) : null;
+      const updated = await this.supabase.updateApartment(apt.apt_number, { has_paid: true });
+      this.patchLocal(updated);
+      await this.recordMaintenancePayment(updated, receiptUrl);
+      this.paymentTarget.set(null);
+      this.paymentFile = null;
+    } catch (error) {
+      this.paymentError.set((error as { message?: string }).message || 'Could not save the payment.');
+    } finally {
+      this.paymentSaving.set(false);
+    }
+  }
+
+  async markUnpaid(apt: Apartment) {
+    this.paymentSaving.set(true);
+    this.paymentError.set('');
+    try {
+      const updated = await this.supabase.updateApartment(apt.apt_number, { has_paid: false });
+      this.patchLocal(updated);
+      this.paymentTarget.set(null);
+      this.paymentFile = null;
+    } catch (error) {
+      this.paymentError.set((error as { message?: string }).message || 'Could not update the payment status.');
+    } finally {
+      this.paymentSaving.set(false);
+    }
   }
 
   async toggleRented(apt: Apartment) {
@@ -362,12 +450,13 @@ export class ManageResidentsComponent implements OnInit {
     }
   }
 
-  private async recordMaintenancePayment(apt: Apartment) {
+  private async recordMaintenancePayment(apt: Apartment, receiptUrl: string | null) {
     await this.finance.addTransaction({
       type: 'income',
       amount: this.fee,
       title: `Maintenance - Apt ${apt.apt_number}`,
       apt_number: apt.apt_number,
+      receipt_url: receiptUrl,
     });
   }
 
