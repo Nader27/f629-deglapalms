@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { GateCard, normalizeGateCardId } from '../../models/building';
+import { GateCard, normalizeApartmentNumber, normalizeGateCardId } from '../../models/building';
 import { SupabaseService } from '../../services/supabase.service';
 
 export interface GateCardCsvImport {
@@ -76,7 +76,10 @@ export function parseGateCardsCsv(csv: string, apartments: ReadonlySet<string>):
       return;
     }
 
-    const normalizedApartment = aptNumber && apartments.has(aptNumber) ? aptNumber : null;
+    const normalizedApartmentNumber = aptNumber ? normalizeApartmentNumber(aptNumber) : null;
+    const normalizedApartment = normalizedApartmentNumber && apartments.has(normalizedApartmentNumber)
+      ? normalizedApartmentNumber
+      : null;
     if (aptNumber && !normalizedApartment) {
       warnings.push(`Row ${rowNumber}: apartment ${aptNumber} was not found and card ${cardId} was left unassigned.`);
     }

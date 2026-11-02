@@ -37,6 +37,12 @@ export interface GateCard {
     created_at?: string;
 }
 
+export function normalizeApartmentNumber(aptNumber: string): string | null {
+    const trimmed = aptNumber.trim();
+    if (!/^\d+$/.test(trimmed) || trimmed.length > 3) return null;
+    return trimmed.padStart(3, '0');
+}
+
 export function normalizeGateCardId(cardId: string): string | null {
     const trimmed = cardId.trim();
     if (!/^\d+$/.test(trimmed) || trimmed.length > 10) return null;
