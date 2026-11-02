@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { Apartment, GateCard, ResidentInfoApproval, normalizeGateCardId } from '../models/building';
+import { Apartment, GateCard, ResidentInfoApproval, normalizeApartmentNumber, normalizeGateCardId } from '../models/building';
 import { AppSettings, DEFAULT_SETTINGS } from '../models/settings';
 
 export interface Transaction {
@@ -196,6 +196,24 @@ export class SupabaseService {
             .from('gate_cards')
             .insert({ apt_number: aptNumber.trim(), card_id: normalizedCardId })
             .select()
+            .single();
+        if (error) throw error;
+        return data as GateCard;
+    }
+
+    async updateGateCardAssignment(cardId: string, aptNumber: string | null): Promise<GateCard> {
+        const normalizedCardId = normalizeGateCardId(cardId);
+        if (!normalizedCardId) throw new Error('RFID card number must contain 1 to 10 digits.');
+        const normalizedApartmentNumber = aptNumber === null ? null : normalizeApartmentNumber(aptNumber);
+        if (aptNumber !== null && !normalizedApartmentNumber) {
+            throw new Error('Apartment number must contain 1 to 3 digits.');
+        }
+
+        const { data, error } = await this.client
+            .from('gate_cards')
+            .update({ apt_number: normalizedApartmentNumber })
+            .eq('card_id', normalizedCardId)
+            .select('id, card_id, apt_number, created_at')
             .single();
         if (error) throw error;
         return data as GateCard;
